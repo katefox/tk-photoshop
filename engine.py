@@ -2,14 +2,9 @@
 A Photoshop engine for Tank.
 """
 
-import os
-import sys
 import logging
-import platform
-import threading
-import time
 import tank
-import photoshop
+from tk_photoshop import photoshop
 
 
 ###############################################################################################
@@ -22,7 +17,7 @@ class PhotoshopEngine(tank.platform.Engine):
 
     def __init__(self, tk, context, engine_instance_name, env):
         self._init_logging()
-        super (PhotoshopEngine, self).__init__(tk, context, engine_instance_name, env)
+        super(PhotoshopEngine, self).__init__(tk, context, engine_instance_name, env)
 
     def init_engine(self):
         self.log_debug("%s: Initializing...", self)
@@ -58,4 +53,3 @@ class PhotoshopEngine(tank.platform.Engine):
 
     def log_exception(self, msg, *args, **kwargs):
         self._logger.exception(msg, *args, **kwargs)
-

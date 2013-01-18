@@ -17,6 +17,7 @@ logger.setLevel(logging.DEBUG)
 logger = logging.getLogger('tank.photoshop.PythonBootstrap')
 logger.info('================================== Initializing Python Interpreter ===================================')
 
+
 # setup default exception handling to log
 def logging_excepthook(type, value, tb):
     logger.exception("Uncaught exception", exc_info=(type, value, tb))
@@ -30,7 +31,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 # initalize photoshop
 ################################################################################
 try:
-    import photoshop
+    from tk_photoshop import photoshop
     remote_port = int(sys.argv[1])
     photoshop.initialize_photoshop_application(remote_port)
 except Exception, e:
@@ -42,9 +43,9 @@ except Exception, e:
 ################################################################################
 from PySide import QtGui
 from PySide import QtCore
-import logging_console
+from tk_photoshop import logging_console
 
-g_resourceDir = os.path.join(os.path.dirname(__file__), "resources")
+g_resourceDir = os.path.join(os.path.dirname(__file__), "..", "resources")
 
 # create global app
 sys.argv[0] = 'Tank Photoshop'
