@@ -5,6 +5,7 @@
 *.swp
 *.lock
 profile
+Thumbs.db
 
 # Vim
 *.swp

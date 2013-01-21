@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 ################################################################################
 try:
     from tk_photoshop import photoshop
+    logger.debug(sys.argv)
     remote_port = int(sys.argv[1])
     photoshop.initialize_photoshop_application(remote_port)
 except Exception, e:
