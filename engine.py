@@ -15,15 +15,12 @@ from tk_photoshop import photoshop
 # The Tank Photoshop engine
 
 class PhotoshopEngine(tank.platform.Engine):
+    _logger = logging.getLogger('tank.photoshop.engine')
 
     ##########################################################################################
     # init and destroy
-
-    def __init__(self, tk, context, engine_instance_name, env):
-        self._init_logging()
-        super(PhotoshopEngine, self).__init__(tk, context, engine_instance_name, env)
-
     def init_engine(self):
+        self._init_logging()
         self.log_debug("%s: Initializing...", self)
         self.log_debug("photoshop module: %s", photoshop)
 
@@ -40,7 +37,6 @@ class PhotoshopEngine(tank.platform.Engine):
     # logging
 
     def _init_logging(self):
-        self._logger = logging.getLogger('tank.photoshop.engine')
         if self.get_setting("debug_logging", False):
             self._logger.setLevel(logging.DEBUG)
         else:

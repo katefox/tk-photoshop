@@ -8,6 +8,7 @@ import logging
 import photoshop.callback_event
 
 from PySide import QtGui
+from PySide import QtCore
 
 COLOR_MAP = {
     'CRITICAL': 'indianred',
@@ -45,6 +46,7 @@ class QtLogHandler(logging.Handler):
 class LogConsole(QtGui.QWidget):
     def __init__(self, parent=None):
         super(LogConsole, self).__init__(parent)
+
         self.setWindowTitle('Tank Photoshop Logs')
         self.layout = QtGui.QVBoxLayout(self)
         self.logs = QtGui.QPlainTextEdit(self)
@@ -53,3 +55,11 @@ class LogConsole(QtGui.QWidget):
         # configure the text widget
         self.logs.setLineWrapMode(self.logs.NoWrap)
         self.logs.setReadOnly(True)
+
+        # load up previous size
+        self.settings = QtCore.QSettings("Shotgun Software", "tk-photoshop.log_console")
+        self.resize(self.settings.value("size", QtCore.QSize(800, 400)))
+
+    def closeEvent(self, event):
+        self.settings.setValue("size", self.size())
+        event.accept()

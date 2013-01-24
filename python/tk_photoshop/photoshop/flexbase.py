@@ -28,15 +28,12 @@ PING = 5  # ENQ
 PONG = 6  # ACK
 
 
-def handle_log_toggle():
+def handle_show_log():
     app = QtCore.QCoreApplication.instance()
     win = app.property('tk-photoshop.log_console')
-    if win.isHidden():
-        win.setHidden(False)
-        win.activateWindow()
-        win.raise_()
-    else:
-        win.setHidden(True)
+    win.setHidden(False)
+    win.activateWindow()
+    win.raise_()
 
 
 class FlexRequest(object):
@@ -121,8 +118,8 @@ class FlexRequest(object):
                 callback_event.send_to_main_thread(cls.callbacks[uid])
             elif type == 'menu_click':
                 menu_id = dom.find('id').text
-                if menu_id == 'toggle_log':
-                    callback_event.send_to_main_thread(handle_log_toggle)
+                if menu_id == 'show_log':
+                    callback_event.send_to_main_thread(handle_show_log)
             elif type == 'app_event':
                 event = dom.find('event').text
                 cls.logger.debug("event: %s", event)
