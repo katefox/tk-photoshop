@@ -41,7 +41,10 @@ class PhotoshopEngine(tank.platform.Engine):
 
     def _init_logging(self):
         self._logger = logging.getLogger('tank.photoshop.engine')
-        self._logger.setLevel(logging.DEBUG)
+        if self.get_setting("debug_logging", False):
+            self._logger.setLevel(logging.DEBUG)
+        else:
+            self._logger.setLevel(logging.INFO)
 
     def log_debug(self, msg, *args, **kwargs):
         self._logger.debug(msg, *args, **kwargs)
