@@ -61,12 +61,14 @@ g_app.setWindowIcon(QtGui.QIcon(os.path.join(g_resourceDir, "app.png")))
 g_app.setApplicationName(sys.argv[0])
 
 # update style
-QtGui.QApplication.setStyle("cleanlooks")
-qss_file = os.path.join(g_resourceDir, "style.qss")
-f = open(qss_file)
-qss = f.read()
-f.close()
-g_app.setStyleSheet(qss)
+try:
+    css_file = os.path.join(g_resourceDir, "dark.css")
+    f = open(css_file)
+    css = f.read()
+    f.close()
+    g_app.setStyleSheet(css)
+except Exception, e:
+    logger.warning("Could not set QT style sheet: %s" % e)
 
 # invisible top level window to allow the app to come to the foreground
 g_win = QtGui.QWidget()
