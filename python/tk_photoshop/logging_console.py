@@ -1,3 +1,7 @@
+#
+# Copyright (c) 2013 Shotgun Software, Inc
+# ----------------------------------------------------
+#
 # log console
 import cgi
 import logging

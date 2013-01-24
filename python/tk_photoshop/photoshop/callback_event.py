@@ -1,3 +1,7 @@
+#
+# Copyright (c) 2013 Shotgun Software, Inc
+# ----------------------------------------------------
+#
 """
 framework for running callbacks in the main PySide GUI thread
 

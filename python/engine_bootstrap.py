@@ -1,5 +1,10 @@
+#
+# Copyright (c) 2013 Shotgun Software, Inc
+# ----------------------------------------------------
+#
 import os
 import sys
+import tank
 import logging
 import logging.handlers
 
