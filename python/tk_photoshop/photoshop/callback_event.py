@@ -27,8 +27,8 @@ class CallbackRunner(QtCore.QObject):
         app = QtCore.QCoreApplication.instance()
         win = app.property('tk-photoshop.top_level_window')
         win.activateWindow()
+
         event.fn(*event.args, **event.kwargs)
-        # TODO: NEED TO RAISE WINDOWS SOMEHOW
         return True
 
 g_callbackRunner = CallbackRunner()
