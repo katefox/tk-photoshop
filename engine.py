@@ -5,8 +5,10 @@
 """
 A Photoshop engine for Tank.
 """
-
+import os
+import sys
 import logging
+
 import tank
 from tk_photoshop import photoshop
 
@@ -23,6 +25,7 @@ class PhotoshopEngine(tank.platform.Engine):
         self._init_logging()
         self.log_debug("%s: Initializing...", self)
         self.log_debug("photoshop module: %s", photoshop)
+        self.__created_qt_dialogs = []
 
     def post_app_init(self):
         import tk_photoshop
@@ -32,6 +35,18 @@ class PhotoshopEngine(tank.platform.Engine):
     def destroy_engine(self):
         self.log_debug("%s: Destroying...", self)
         self._panel_generator.destroy_panel()
+
+    ##########################################################################################
+    # dialog management
+    def show_dialog(self, title, bundle, widget_class, *args, **kwargs):
+        obj = super(PhotoshopEngine, self).show_dialog(title, bundle, widget_class, *args, **kwargs)
+
+        if sys.platform == "darwin":
+            import Cocoa
+            pid = os.getpid()
+            app = Cocoa.NSRunningApplication.runningApplicationWithProcessIdentifier_(pid)
+            app.activateWithOptions_(Cocoa.NSApplicationActivateIgnoringOtherApps)
+        return obj
 
     ##########################################################################################
     # logging
