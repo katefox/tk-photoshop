@@ -25,6 +25,7 @@ def append_to_log(widget, text):
     cursor.movePosition(cursor.StartOfLine)
     widget.setTextCursor(cursor)
     widget.ensureCursorVisible()
+append_to_log._tkLog = False
 
 
 class QtLogHandler(logging.Handler):
