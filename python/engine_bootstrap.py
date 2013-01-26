@@ -56,10 +56,12 @@ g_resourceDir = os.path.join(os.path.dirname(__file__), "..", "resources")
 # create global app
 try:
     sys.argv[0] = 'Tank Photoshop'
+    QtGui.QApplication.setStyle("cleanlooks")
     g_app = QtGui.QApplication(sys.argv)
     g_app.setQuitOnLastWindowClosed(False)
     g_app.setWindowIcon(QtGui.QIcon(os.path.join(g_resourceDir, "app.png")))
     g_app.setApplicationName(sys.argv[0])
+    
 except Exception:
     logger.exception("Could not create global app")
 
