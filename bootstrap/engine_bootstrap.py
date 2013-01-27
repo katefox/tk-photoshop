@@ -22,21 +22,22 @@ logger.setLevel(logging.INFO)
 logger = logging.getLogger('tank.photoshop.PythonBootstrap')
 logger.info('================================== Initializing Python Interpreter ===================================')
 
-
 # setup default exception handling to log
 def logging_excepthook(type, value, tb):
     logger.exception("Uncaught exception", exc_info=(type, value, tb))
     sys.__excepthook__(type, value, tb)
 sys.execpthook = logging_excepthook
 
-# setup sys path to include photoshop
+
 ################################################################################
-sys.path.insert(0, os.path.dirname(__file__))
+
+# setup sys path to include photoshop API
+api_path = os.path.abspath(os.path.join( os.path.dirname(__file__), "..", "python"))
+sys.path.insert(0, api_path)
 
 # initalize photoshop
-################################################################################
 try:
-    from tk_photoshop import photoshop
+    import photoshop
     logger.debug(sys.argv)
     remote_port = int(sys.argv[1])
     photoshop.initialize_photoshop_application(remote_port)

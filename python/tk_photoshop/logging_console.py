@@ -5,7 +5,7 @@
 # log console
 import cgi
 import logging
-import photoshop.callback_event
+import photoshop
 
 from PySide import QtGui
 from PySide import QtCore
