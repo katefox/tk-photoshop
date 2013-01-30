@@ -5,12 +5,11 @@
 """
 A Photoshop engine for Tank.
 """
-
 import os
 import sys
 import logging
+
 import tank
-from tk_photoshop import photoshop
 
 
 ###############################################################################################
@@ -24,14 +23,12 @@ class PhotoshopEngine(tank.platform.Engine):
     def init_engine(self):
         self._init_logging()
         self.log_debug("%s: Initializing...", self)
-        self.log_debug("photoshop module: %s", photoshop)
-        
-        self._created_qt_dialogs = []
+        self.__created_qt_dialogs = []
 
     def post_app_init(self):
         import tk_photoshop
         self._panel_generator = tk_photoshop.PanelGenerator(self)
-        self._panel_generator.populate_panel()
+        self._panel_generator.populate_panel()        
 
     def destroy_engine(self):
         self.log_debug("%s: Destroying...", self)
@@ -156,13 +153,13 @@ class PhotoshopEngine(tank.platform.Engine):
         """
         debug_force_modal = False # debug switch for testing modal dialog
         if debug_force_modal:
-            self.show_modal(title, bundle, widget_class, *args, **kwargs)
+            status, obj = self.show_modal(title, bundle, widget_class, *args, **kwargs)
+            return obj
         else:
             dialog, obj = self._create_dialog(title, bundle, widget_class, *args, **kwargs)
             dialog.show()
             return obj
 
-        
     def show_modal(self, title, bundle, widget_class, *args, **kwargs):
         """
         Shows a modal dialog window in a way suitable for this engine. The engine will attempt to
@@ -203,8 +200,6 @@ class PhotoshopEngine(tank.platform.Engine):
                     win_32_api.EnableWindow(hwnd, state)
             
         return status, obj
-    
-
 
     ##########################################################################################
     # logging

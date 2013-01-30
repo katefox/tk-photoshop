@@ -41,19 +41,6 @@ class PanelGenerator(object):
 
         self._engine.log_debug("panel_items: %s", panel_items)
 
-        # now add favourites
-        for fav in self._engine.get_setting("menu_favourites"):
-            app_instance_name = fav["app_instance"]
-            panel_name = fav["name"]
-
-            # scan through all panel items
-            for cmd in panel_items:
-                 if cmd.get_app_instance_name() == app_instance_name and cmd.name == panel_name:
-                     # found our match!
-                     cmd.add_button()
-                     # mark as a favourite item
-                     cmd.favourite = True
-
         # now go through all of the panel items.
         # separate them out into various sections
         commands_by_app = {}
@@ -164,9 +151,7 @@ class PanelGenerator(object):
                 # todo: Should this be labelled with the name of the app
                 # or the name of the panel item? Not sure.
                 cmd_obj = commands_by_app[app_name][0]
-                if not cmd_obj.favourite:
-                    # skip favourites since they are alreay on the panel
-                    cmd_obj.add_button()
+                cmd_obj.add_button()
 
 
 class AppCommand(object):
@@ -177,8 +162,6 @@ class AppCommand(object):
         self.name = name
         self.properties = command_dict["properties"]
         self.callback = command_dict["callback"]
-        self.favourite = False
-
 
     def get_app_name(self):
         """

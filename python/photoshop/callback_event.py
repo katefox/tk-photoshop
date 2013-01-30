@@ -8,6 +8,7 @@ framework for running callbacks in the main PySide GUI thread
 This is used by the logging console to update the gui on the main thread
 and so it cannot use logging itself
 """
+import logging
 from PySide import QtCore
 
 
@@ -22,13 +23,15 @@ class RunCallbackEvent(QtCore.QEvent):
 
 
 class CallbackRunner(QtCore.QObject):
-    def event(self, event):
-        # Bring app to the foreground if we can
-        app = QtCore.QCoreApplication.instance()
-        win = app.property('tk-photoshop.top_level_window')
-        win.activateWindow()
+    _logger = logging.getLogger('tank.photoshop.engine')
 
-        event.fn(*event.args, **event.kwargs)
+    def event(self, event):
+        try:
+            if (getattr(event.fn, '_tkLog', True)):
+                self._logger.info("Callback %s", str(event.fn))
+            event.fn(*event.args, **event.kwargs)
+        except Exception:
+            self._logger.exception("Error in callback %s", str(event.fn))
         return True
 
 g_callbackRunner = CallbackRunner()
