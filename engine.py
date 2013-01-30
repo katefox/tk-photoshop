@@ -133,7 +133,7 @@ class PhotoshopEngine(tank.platform.Engine):
 
         # keep a reference to all created dialogs to make GC happy
         if dialog:
-            self._created_qt_dialogs.append(dialog)
+            self.__created_qt_dialogs.append(dialog)
         
         return dialog, obj
     
