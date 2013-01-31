@@ -131,6 +131,9 @@ class PhotoshopEngine(tank.platform.Engine):
         # now construct the dialog:
         dialog = tankqdialog.TankQDialog(title, bundle, obj, parent_widget)
 
+        # For now on OSX keep the window on top so it is not hidden
+        if sys.platform == "darwin":
+            dialog.setWindowFlags(dialog.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
         # keep a reference to all created dialogs to make GC happy
         if dialog:
             self.__created_qt_dialogs.append(dialog)
@@ -163,42 +166,42 @@ class PhotoshopEngine(tank.platform.Engine):
     def show_modal(self, title, bundle, widget_class, *args, **kwargs):
         """
         Shows a modal dialog window in a way suitable for this engine. The engine will attempt to
-        integrate it as seamlessly as possible into the host application. This call is blocking 
+        integrate it as seamlessly as possible into the host application. This call is blocking
         until the user closes the dialog.
-        
+
         :param title: The title of the window
         :param bundle: The app, engine or framework object that is associated with this window
         :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
-        
+
         Additional parameters specified will be passed through to the widget_class constructor.
 
         :returns: (a standard QT dialog status return code, the created widget_class instance)
         """
-        from tk_photoshop import win_32_api
-        
         dialog, obj = self._create_dialog(title, bundle, widget_class, *args, **kwargs)
-        
-        # find all photoshop windows and save enabled state:
-        saved_state = []
-        try:
-            ps_process_id = self._win32_get_photoshop_process_id()
-            if ps_process_id != None:
-                found_hwnds = win_32_api.find_windows(process_id = ps_process_id, stop_if_found=False)    
-                for hwnd in found_hwnds:
-                    enabled = win_32_api.IsWindowEnabled(hwnd)
-                    saved_state.append((hwnd, enabled))
-                    win_32_api.EnableWindow(hwnd, False)
-            
-                # show dialog:
-                status = dialog.exec_()
-        except Exception, e:
-            self.log_error("Error creating modal dialog: %s", e)
-        else:           
-            # kinda important to restore other window state:
-            for hwnd, state in saved_state:
-                if win_32_api.IsWindowEnabled(hwnd) != state:
-                    win_32_api.EnableWindow(hwnd, state)
-            
+
+        if sys.platform == "win32":
+            from tk_photoshop import win_32_api
+
+            # find all photoshop windows and save enabled state:
+            saved_state = []
+            try:
+                ps_process_id = self._win32_get_photoshop_process_id()
+                if ps_process_id != None:
+                    found_hwnds = win_32_api.find_windows(process_id=ps_process_id, stop_if_found=False)
+                    for hwnd in found_hwnds:
+                        enabled = win_32_api.IsWindowEnabled(hwnd)
+                        saved_state.append((hwnd, enabled))
+                        win_32_api.EnableWindow(hwnd, False)
+            except Exception, e:
+                self.log_error("Error creating modal dialog: %s", e)
+            else:
+                # kinda important to restore other window state:
+                for hwnd, state in saved_state:
+                    if win_32_api.IsWindowEnabled(hwnd) != state:
+                        win_32_api.EnableWindow(hwnd, state)
+
+        # show dialog:
+        status = dialog.exec_()
         return status, obj
 
     ##########################################################################################
