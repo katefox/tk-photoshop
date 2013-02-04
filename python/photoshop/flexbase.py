@@ -169,9 +169,6 @@ class FlexRequest(object):
 
             # response is now available, grab it
             result = self.requests[uid]['response']
-        except:
-            self.logger.exception('error')
-            raise
         finally:
             del self.requests[uid]
 
@@ -188,22 +185,24 @@ def dictToPython(d):
         return None
     if d['type'] in ['null', 'undefined']:
         return None
-    if d['type'] in ['String', 'Number', 'int', 'uint']:
+    if d['type'] in ['String', 'Number', 'Boolean', 'int', 'uint']:
         return d['value']
     if d['type'] == 'Array':
         return [dictToPython[e] for e in d['value']]
     if d['type'] == 'RemoteObject':
         return RemoteObject(d['cls'], uid=d['obj_uid'])
     if d['type'] == 'error':
-        raise RuntimeError(d['value'])
+        raise RuntimeError(d['stack'])
     raise ValueError("Unknown reponse object '%s'", d)
 
 
 def pythonToDict(v):
     if v is None:
         return {'type': 'null'}
-    if isinstance(v, str):
+    if isinstance(v, str) or isinstance(v, unicode):
         return {'type': 'String', 'value': v}
+    if isinstance(v, bool):
+        return {'type': 'Boolean', 'value': v}
     if isinstance(v, int):
         return {'type': 'int', 'value': v}
     if isinstance(v, float):
@@ -212,71 +211,56 @@ def pythonToDict(v):
         return {'type': 'Array', 'value': [pythonToDict(e) for e in v]}
     if isinstance(v, RemoteObject):
         return {'type': 'RemoteObject', 'cls': v._cls, 'obj_uid': v._uid}
-    raise ValueError("Unhandled python object '%s'", v)
+    raise ValueError("Unhandled python object (%s) '%s'" % (type(v), v))
 
 
 def requestClearPanel():
     logger = logging.getLogger('tank.photoshop.flexbase')
     logger.debug("requestClearPanel()")
-    try:
-        request = {
-            'type': 'clearpanel',
-        }
-        FlexRequest(json.dumps(request))()
-        FlexRequest.callbacks.clear()
-    except:
-        logger.exception('error in requestClearPanel')
-        raise
+    request = {'type': 'clearpanel'}
+    FlexRequest(json.dumps(request))()
+    FlexRequest.callbacks.clear()
 
 
 def requestAddButton(label, callback):
     logger = logging.getLogger('tank.photoshop.flexbase')
     logger.debug("requestAddButton('%s')", label)
-    try:
-        request = {
-            'type': 'addbutton',
-            'label': label,
-        }
-        results = FlexRequest(json.dumps(request))()
-        results = json.loads(results)
-        results = dictToPython(results)
-        FlexRequest.callbacks[results] = callback
-    except:
-        logger.exception('error in requestAddButton')
-        raise
+    request = {
+        'type': 'addbutton',
+        'label': label,
+    }
+    results = FlexRequest(json.dumps(request))()
+    results = json.loads(results)
+    results = dictToPython(results)
+    FlexRequest.callbacks[results] = callback
 
 
 def requestStatic(cls, prop):
     logger = logging.getLogger('tank.photoshop.flexbase')
     logger.debug("requestStatic('%s', '%s')", cls, prop)
-    try:
-        request = {
-            'type': 'static',
-            'cls': cls,
-            'prop': prop,
-        }
-        results = FlexRequest(json.dumps(request))()
-        results = json.loads(results)
-        return dictToPython(results)
-    except:
-        logger.exception('error in requestStatic')
-        raise
+    request = {
+        'type': 'static',
+        'cls': cls,
+        'prop': prop,
+    }
+    results = FlexRequest(json.dumps(request))()
+    results = json.loads(results)
+    return dictToPython(results)
 
 
 def requestClassDesc(cls):
     logger = logging.getLogger('tank.photoshop.flexbase')
     logger.debug("requestClassDesc('%s')", cls)
+    request = {
+        'type': 'classdef',
+        'cls': cls,
+    }
+    results = FlexRequest(json.dumps(request))()
     try:
-        request = {
-            'type': 'classdef',
-            'cls': cls,
-        }
-        results = FlexRequest(json.dumps(request))()
         dom = etree.XML(results)
-        return dom
-    except:
-        logger.exception('error in requestClassDesc')
-        raise
+    except Exception:
+        raise ValueError("Invalid class description: %s" % results)
+    return dom
 
 
 class RemoteObject(object):
@@ -324,7 +308,6 @@ class RemoteObject(object):
                 break
         if accessor is not None:
             if accessor.get('access') == 'writeonly':
-                self._logger.error("attempting to access writeonly property '%s'", attr)
                 raise ValueError("attempting to access writeonly property '%s'" % attr)
             request = {
                 'type': 'getprop',

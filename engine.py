@@ -14,7 +14,6 @@ import tank
 
 ###############################################################################################
 # The Tank Photoshop engine
-
 class PhotoshopEngine(tank.platform.Engine):
     _logger = logging.getLogger('tank.photoshop.engine')
 
@@ -28,7 +27,7 @@ class PhotoshopEngine(tank.platform.Engine):
     def post_app_init(self):
         import tk_photoshop
         self._panel_generator = tk_photoshop.PanelGenerator(self)
-        self._panel_generator.populate_panel()        
+        self._panel_generator.populate_panel()
 
     def destroy_engine(self):
         self.log_debug("%s: Destroying...", self)
@@ -44,14 +43,14 @@ class PhotoshopEngine(tank.platform.Engine):
         if hasattr(self, "_win32_photoshop_process_id"):
             return self._win32_photoshop_process_id
         self._win32_photoshop_process_id = None
-        
+
         this_pid = os.getpid()
-        
+
         from tk_photoshop import win_32_api
         self._win32_photoshop_process_id = win_32_api.find_parent_process_id(this_pid)
-            
+
         return self._win32_photoshop_process_id
-    
+
     def _win32_get_photoshop_main_hwnd(self):
         """
         Windows specific method to find the main Photoshop window
@@ -60,70 +59,70 @@ class PhotoshopEngine(tank.platform.Engine):
         if hasattr(self, "_win32_photoshop_main_hwnd"):
             return self._win32_photoshop_main_hwnd
         self._win32_photoshop_main_hwnd = None
-        
+
         # find photoshop process id:
         ps_process_id = self._win32_get_photoshop_process_id()
-        
+
         if ps_process_id != None:
             # get main application window for photoshop process:
             from tk_photoshop import win_32_api
-            found_hwnds = win_32_api.find_windows(process_id = ps_process_id, class_name = "Photoshop", stop_if_found=False)
+            found_hwnds = win_32_api.find_windows(process_id=ps_process_id, class_name="Photoshop", stop_if_found=False)
             if len(found_hwnds) == 1:
                 self._win32_photoshop_main_hwnd = found_hwnds[0]
-                
+
         return self._win32_photoshop_main_hwnd
-        
+
     def _win32_get_proxy_window(self):
         """
         Windows specific method to get the proxy window that will 'own' all Tank dialogs.  This
-        will be parented to the main photoshop application.  Creates the proxy window 
+        will be parented to the main photoshop application.  Creates the proxy window
         if it doesn't already exist.
         """
         if hasattr(self, "_win32_proxy_win"):
             return self._win32_proxy_win
         self._win32_proxy_win = None
-        
+
         # get the main Photoshop window:
         ps_hwnd = self._win32_get_photoshop_main_hwnd()
         if ps_hwnd != None:
-            
+
             from PySide import QtGui
             from tk_photoshop import win_32_api
-            
+
             # create the proxy QWidget:
             self._win32_proxy_win = QtGui.QWidget()
             self._win32_proxy_win.setWindowTitle('tank dialog owner proxy')
-            
+
             proxy_win_hwnd = win_32_api.qwidget_winid_to_hwnd(self._win32_proxy_win.winId())
-            
+
             # parent to photoshop application window:
             win_32_api.SetParent(proxy_win_hwnd, ps_hwnd)
-        
+
         return self._win32_proxy_win
-        
+
     def _create_dialog(self, title, bundle, widget_class, *args, **kwargs):
         """
-        Create the standard Tank dialog, with ownership assigned to the main photoshop 
+        Create the standard Tank dialog, with ownership assigned to the main photoshop
         application window if possible.
-        
+
         :param title: The title of the window
         :param bundle: The app, engine or framework object that is associated with this window
         :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
-        
+
         Additional parameters specified will be passed through to the widget_class constructor.
-        
+
         :returns: the created widget_class instance
         """
-        from PySide import QtCore, QtGui
+        from PySide import QtCore
         from tank.platform.qt import tankqdialog
-        
-        # first construct the widget object 
+
+        # first construct the widget object
         obj = widget_class(*args, **kwargs)
 
         # determine the parent widget to use:
         parent_widget = None
         if sys.platform == "win32":
-            # for windows, we create a proxy window parented to the 
+            # for windows, we create a proxy window parented to the
             # main application window that we can then set as the owner
             # for all Tank dialogs
             parent_widget = self._win32_get_proxy_window()
@@ -137,24 +136,23 @@ class PhotoshopEngine(tank.platform.Engine):
         # keep a reference to all created dialogs to make GC happy
         if dialog:
             self.__created_qt_dialogs.append(dialog)
-        
+
         return dialog, obj
-    
-    
+
     def show_dialog(self, title, bundle, widget_class, *args, **kwargs):
         """
-        Shows a non-modal dialog window in a way suitable for this engine. 
+        Shows a non-modal dialog window in a way suitable for this engine.
         The engine will attempt to parent the dialog nicely to the host application.
-        
+
         :param title: The title of the window
         :param bundle: The app, engine or framework object that is associated with this window
         :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
-        
+
         Additional parameters specified will be passed through to the widget_class constructor.
-        
+
         :returns: the created widget_class instance
         """
-        debug_force_modal = False # debug switch for testing modal dialog
+        debug_force_modal = False  # debug switch for testing modal dialog
         if debug_force_modal:
             status, obj = self.show_modal(title, bundle, widget_class, *args, **kwargs)
             return obj
@@ -208,10 +206,11 @@ class PhotoshopEngine(tank.platform.Engine):
     # logging
 
     def _init_logging(self):
+        tank_logger = logging.getLogger('tank')
         if self.get_setting("debug_logging", False):
-            self._logger.setLevel(logging.DEBUG)
+            tank_logger.setLevel(logging.DEBUG)
         else:
-            self._logger.setLevel(logging.INFO)
+            tank_logger.setLevel(logging.INFO)
 
     def log_debug(self, msg, *args, **kwargs):
         self._logger.debug(msg, *args, **kwargs)
