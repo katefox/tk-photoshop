@@ -121,18 +121,18 @@ class PhotoshopEngine(tank.platform.Engine):
 
         # determine the parent widget to use:
         parent_widget = None
-        if sys.platform == "win32":
-            # for windows, we create a proxy window parented to the
-            # main application window that we can then set as the owner
-            # for all Tank dialogs
-            parent_widget = self._win32_get_proxy_window()
+        # if sys.platform == "win32":
+        #     # for windows, we create a proxy window parented to the
+        #     # main application window that we can then set as the owner
+        #     # for all Tank dialogs
+        #     parent_widget = self._win32_get_proxy_window()
 
         # now construct the dialog:
         dialog = tankqdialog.TankQDialog(title, bundle, obj, parent_widget)
 
-        # For now on OSX keep the window on top so it is not hidden
-        if sys.platform == "darwin":
-            dialog.setWindowFlags(dialog.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
+        # For now keep the window on top so it is not hidden
+        dialog.setWindowFlags(dialog.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
+
         # keep a reference to all created dialogs to make GC happy
         if dialog:
             self.__created_qt_dialogs.append(dialog)

@@ -60,8 +60,8 @@ class FlexRequest(object):
                 s.send(struct.pack("i", PING))
                 response = struct.unpack("i", s.recv(struct.calcsize("i")))[0]
                 if response != PONG:
-                    cls.logger.debug("Python Quitting: Heartbeat unknown response: %s", response)
-                    os._exit(0)
+                    cls.logger.exception("Python Quitting: Heartbeat unknown response: %s", response)
+                    os._exit(1)
             except socket.timeout:
                 cls.logger.debug("Python Quitting: Heartbeat timeout")
                 os._exit(0)
@@ -124,9 +124,9 @@ class FlexRequest(object):
                 event = dom.find('event').text
                 cls.logger.debug("event: %s", event)
             else:
-                cls.logger.debug('unknown python request type %s', type)
+                cls.logger.error('unknown python request type %s', type)
         else:
-            cls.logger.debug('unknown event type %d', type)
+            cls.logger.error('unknown event type %d', type)
 
     def __init__(self, request):
         self.request = request
@@ -134,7 +134,7 @@ class FlexRequest(object):
 
     def __call__(self):
         # register this call for the response
-        uid = str(uuid.uuid1())
+        uid = str(uuid.uuid4())
         self.requests[uid] = {
             'cond': threading.Condition(),
             'response': None,
@@ -162,9 +162,9 @@ class FlexRequest(object):
             s.close()
 
             # wait for response to come through
-            self.requests[uid]['cond'].wait(5.0)
+            self.requests[uid]['cond'].wait(2.0)
             if not self.requests[uid]['responded']:
-                del self.requests[uid]
+                self.logger.error("No response to: %s" % uid)
                 raise RuntimeError('timeout waiting for response: %s' % self.request)
 
             # response is now available, grab it

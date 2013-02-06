@@ -49,7 +49,6 @@ except Exception, e:
 # Startup PySide
 ################################################################################
 from PySide import QtGui
-from PySide import QtCore
 from tk_photoshop import logging_console
 
 g_resourceDir = os.path.join(os.path.dirname(__file__), "..", "resources")
@@ -62,7 +61,6 @@ try:
     g_app.setQuitOnLastWindowClosed(False)
     g_app.setWindowIcon(QtGui.QIcon(os.path.join(g_resourceDir, "app.png")))
     g_app.setApplicationName(sys.argv[0])
-
 except Exception:
     logger.exception("Could not create global app")
 
@@ -75,16 +73,6 @@ try:
     g_app.setStyleSheet(css)
 except Exception:
     logger.exception("Could not set QT style sheet")
-
-# invisible top level window to allow the app to come to the foreground
-try:
-    g_win = QtGui.QWidget()
-    g_win.setWindowFlags(QtCore.Qt.FramelessWindowHint)
-    g_win.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-    g_app.setProperty("tk-photoshop.top_level_window", g_win)
-    g_win.show()
-except Exception:
-    logger.exception("Could not create top level window")
 
 # logging console
 try:
