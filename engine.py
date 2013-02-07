@@ -95,6 +95,12 @@ class PhotoshopEngine(tank.platform.Engine):
 
             proxy_win_hwnd = win_32_api.qwidget_winid_to_hwnd(self._win32_proxy_win.winId())
 
+            # set no parent notify:
+            win_ex_style = win_32_api.GetWindowLong(proxy_win_hwnd, win_32_api.GWL_EXSTYLE)
+            win_32_api.SetWindowLong(proxy_win_hwnd, win_32_api.GWL_EXSTYLE, 
+                                     win_ex_style 
+                                     | win_32_api.WS_EX_NOPARENTNOTIFY)
+
             # parent to photoshop application window:
             win_32_api.SetParent(proxy_win_hwnd, ps_hwnd)
 
@@ -121,17 +127,15 @@ class PhotoshopEngine(tank.platform.Engine):
 
         # determine the parent widget to use:
         parent_widget = None
-        # if sys.platform == "win32":
-        #     # for windows, we create a proxy window parented to the
-        #     # main application window that we can then set as the owner
-        #     # for all Tank dialogs
-        #     parent_widget = self._win32_get_proxy_window()
+        if sys.platform == "win32":
+            # for windows, we create a proxy window parented to the
+            # main application window that we can then set as the owner
+            # for all Tank dialogs
+            parent_widget = self._win32_get_proxy_window()
 
+        
         # now construct the dialog:
         dialog = tankqdialog.TankQDialog(title, bundle, obj, parent_widget)
-
-        # For now keep the window on top so it is not hidden
-        dialog.setWindowFlags(dialog.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
 
         # keep a reference to all created dialogs to make GC happy
         if dialog:
@@ -175,31 +179,39 @@ class PhotoshopEngine(tank.platform.Engine):
 
         :returns: (a standard QT dialog status return code, the created widget_class instance)
         """
+        from PySide import QtGui
+        
         dialog, obj = self._create_dialog(title, bundle, widget_class, *args, **kwargs)
 
+        status = QtGui.QDialog.Rejected
         if sys.platform == "win32":
             from tk_photoshop import win_32_api
 
-            # find all photoshop windows and save enabled state:
             saved_state = []
             try:
+                # find all photoshop windows and save enabled state:
                 ps_process_id = self._win32_get_photoshop_process_id()
                 if ps_process_id != None:
                     found_hwnds = win_32_api.find_windows(process_id=ps_process_id, stop_if_found=False)
                     for hwnd in found_hwnds:
                         enabled = win_32_api.IsWindowEnabled(hwnd)
                         saved_state.append((hwnd, enabled))
-                        win_32_api.EnableWindow(hwnd, False)
+                        if enabled:
+                            win_32_api.EnableWindow(hwnd, False)
+
+                # show dialog:
+                status = dialog.exec_()
             except Exception, e:
-                self.log_error("Error creating modal dialog: %s", e)
-            else:
-                # kinda important to restore other window state:
+                self.log_error("Error showing modal dialog: %s", e)
+            finally:
+                # kinda important to ensure we restore other window state:
                 for hwnd, state in saved_state:
                     if win_32_api.IsWindowEnabled(hwnd) != state:
                         win_32_api.EnableWindow(hwnd, state)
+        else:
+            # show dialog:
+            status = dialog.exec_()
 
-        # show dialog:
-        status = dialog.exec_()
         return status, obj
 
     ##########################################################################################

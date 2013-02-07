@@ -13,7 +13,7 @@ import logging
 import threading
 import xml.etree.cElementTree as etree
 
-from PySide import QtCore
+from PySide import QtCore, QtGui
 
 from . import callback_event
 
@@ -162,7 +162,17 @@ class FlexRequest(object):
             s.close()
 
             # wait for response to come through
-            self.requests[uid]['cond'].wait(2.0)
+            num_ticks = 10
+            timeout = 2.0
+            for tick in range(0, num_ticks):
+                if self.requests[uid]['responded']:
+                    break
+                # self.logger.error("Tick: %d" % tick)
+                self.requests[uid]['cond'].wait(timeout/num_ticks)
+                
+                # make sure QApplication has had a chance to process events:
+                QtGui.QApplication.processEvents()
+                
             if not self.requests[uid]['responded']:
                 self.logger.error("No response to: %s" % uid)
                 raise RuntimeError('timeout waiting for response: %s' % self.request)

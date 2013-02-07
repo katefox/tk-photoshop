@@ -20,6 +20,8 @@ SetParent = ctypes.windll.user32.SetParent
 RealGetWindowClass = ctypes.windll.user32.RealGetWindowClassW
 EnableWindow = ctypes.windll.user32.EnableWindow
 IsWindowEnabled = ctypes.windll.user32.IsWindowEnabled
+GetWindowLong = ctypes.windll.user32.GetWindowLongW
+SetWindowLong = ctypes.windll.user32.SetWindowLongW
 
 # kernal32.dll
 CloseHandle = ctypes.windll.kernel32.CloseHandle
@@ -32,6 +34,9 @@ TH32CS_SNAPPROCESS = 0x00000002
 WM_GETTEXT = 0x000D
 SMTO_ABORTIFHUNG = 0x0002
 SMTO_BLOCK = 0x0001
+GWL_EXSTYLE = -20
+WS_EX_NOPARENTNOTIFY = 0x00000004
+WS_EX_NOINHERITLAYOUT = 0x00100000
 
 # structures
 class PROCESSENTRY32(ctypes.Structure):
