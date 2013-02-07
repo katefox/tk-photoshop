@@ -11,6 +11,8 @@ import logging
 
 import tank
 
+from photoshop.flexbase import FlexRequest
+
 
 ###############################################################################################
 # The Tank Photoshop engine
@@ -119,7 +121,6 @@ class PhotoshopEngine(tank.platform.Engine):
 
         :returns: the created widget_class instance
         """
-        from PySide import QtCore
         from tank.platform.qt import tankqdialog
 
         # first construct the widget object
@@ -133,9 +134,11 @@ class PhotoshopEngine(tank.platform.Engine):
             # for all Tank dialogs
             parent_widget = self._win32_get_proxy_window()
 
-        
         # now construct the dialog:
         dialog = tankqdialog.TankQDialog(title, bundle, obj, parent_widget)
+        FlexRequest.ActivatePython()
+        dialog.raise_()
+        dialog.activateWindow()
 
         # keep a reference to all created dialogs to make GC happy
         if dialog:
@@ -182,6 +185,9 @@ class PhotoshopEngine(tank.platform.Engine):
         from PySide import QtGui
         
         dialog, obj = self._create_dialog(title, bundle, widget_class, *args, **kwargs)
+        FlexRequest.ActivatePython()
+        dialog.raise_()
+        dialog.activateWindow()
 
         status = QtGui.QDialog.Rejected
         if sys.platform == "win32":

@@ -4,6 +4,7 @@
 #
 import os
 import json
+import math
 import time
 import uuid
 import errno
@@ -20,12 +21,13 @@ from . import callback_event
 PYTHON_REQUEST = 1
 PYTHON_RESPONSE = 2
 PYTHON_QUIT = 3
-
-PYTHON_CALLBACK = 10004
-SET_PORT = 10005
+ACTIVATE_PYTHON = 4
 
 PING = 5  # ENQ
 PONG = 6  # ACK
+
+PYTHON_CALLBACK = 10004
+SET_PORT = 10005
 
 
 def handle_show_log():
@@ -48,6 +50,12 @@ class FlexRequest(object):
         heartbeat = threading.Thread(target=cls.HeartbeatThreadRun, name="HeartbeatThread")
         server.start()
         heartbeat.start()
+
+    @classmethod
+    def ActivatePython(cls):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(('127.0.0.1', cls.remote_port))
+        s.send(struct.pack("i", ACTIVATE_PYTHON))
 
     @classmethod
     def HeartbeatThreadRun(cls):
@@ -162,23 +170,27 @@ class FlexRequest(object):
             s.close()
 
             # wait for response to come through
-            num_ticks = 10
-            timeout = 2.0
-            for tick in range(0, num_ticks):
+            timeout = 60.0
+            tick_length = 0.1
+            num_ticks = math.ceil(timeout/tick_length)
+            for tick in range(0, int(num_ticks)):
                 if self.requests[uid]['responded']:
                     break
                 # self.logger.error("Tick: %d" % tick)
                 self.requests[uid]['cond'].wait(timeout/num_ticks)
-                
+
                 # make sure QApplication has had a chance to process events:
                 QtGui.QApplication.processEvents()
-                
+
             if not self.requests[uid]['responded']:
                 self.logger.error("No response to: %s" % uid)
                 raise RuntimeError('timeout waiting for response: %s' % self.request)
 
             # response is now available, grab it
             result = self.requests[uid]['response']
+        except:
+            self.logger.exception("Error in FlexRequest.__call__")
+            raise
         finally:
             del self.requests[uid]
 
@@ -307,8 +319,6 @@ class RemoteObject(object):
         return "<%s %s>" % (self._cls, self._uid)
 
     def __getattr__(self, attr):
-        self._logger.debug("__getattr__('%s')", attr)
-
         # check if attr is an accessor
         accessor = None
         accessors = self._dom.findall('factory/accessor')
