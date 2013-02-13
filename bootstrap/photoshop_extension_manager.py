@@ -13,29 +13,17 @@ ENV_VAR = "TANK_PHOTOSHOP_EXTENSION_MANAGER"
 
 
 def update():
-    # Setup defaults
-    config = ConfigParser.SafeConfigParser()
-    config.add_section("Adobe Extension")
-    config.set("Adobe Extension", "installed_version", "0.0.0")
-
-    # Load the actual config
-    config_fname = _get_conf_file()
-    if os.path.exists(config_fname):
-        config.read(config_fname)
+    # Upgrade if the installed version is out of date
+    config = _get_config()
     installed_version = config.get("Adobe Extension", "installed_version")
-
-    # And upgrade if the installed version is out of date
     if _version_cmp(CURRENT_EXTENSION, installed_version) > 0:
         _upgrade_extension()
-        config.set("Adobe Extension", "installed_version", CURRENT_EXTENSION)
 
-        # Create directory for config file if it does not exist
-        config_dir = os.path.dirname(config_fname)
-        if not os.path.exists(config_dir):
-            os.makedirs(config_dir)
-        # Save out the updated config
-        with open(config_fname, "wb") as fp:
-            config.write(fp)
+
+def tag():
+    config = _get_config()
+    config.set("Adobe Extension", "installed_version", CURRENT_EXTENSION)
+    _save_config(config)
 
 
 # - Internal -------------------------------------------------------------------
@@ -43,7 +31,35 @@ _APPNAME = "com.shotgunsoftware.TankPython"
 _CSIDL_LOCAL_APPDATA = 28
 
 
-def _get_conf_file():
+def _get_config():
+    # Setup defaults
+    config = ConfigParser.SafeConfigParser()
+    config.add_section("Adobe Extension")
+    config.set("Adobe Extension", "installed_version", "0.0.0")
+
+    # Load the actual config
+    config_fname = _get_conf_fname()
+    if os.path.exists(config_fname):
+        config.read(config_fname)
+
+    return config
+
+
+def _save_config(config):
+    # Create directory for config file if it does not exist
+    config_fname = _get_conf_fname()
+    config_dir = os.path.dirname(config_fname)
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
+    # Save out the updated config
+    fp = open(config_fname, "wb")
+    try:
+        config.write(fp)
+    finally:
+        fp.close()
+
+
+def _get_conf_fname():
     if sys.platform == "win32":
         return _get_win_fname()
     elif sys.platform == "darwin":
@@ -94,8 +110,7 @@ def _upgrade_extension():
     zxp_path = os.path.normpath(os.path.join(__file__, "..", "..", "Tank.zxp"))
     if sys.platform == "darwin":
         # Run the executable directly from within the bundle
-        bundle_path = os.path.join("Contents", "MacOS", os.path.splitext(os.path.basename(extension_manager))[0])
-        args = [os.path.join(extension_manager, bundle_path), "-suppress", "-install", 'zxp="%s"' % zxp_path]
+        args = ['open', '-W', zxp_path]
     elif sys.platform == "win32":
         args = [extension_manager, "-install", 'zxp="%s"' % zxp_path]
     else:
@@ -108,90 +123,3 @@ def _upgrade_extension():
         error = subprocess.CalledProcessError(ret, args[0])
         error.output = output
         raise error
-
-"""
-# The below is an attempt to run the install with elevated UAC privs so
-# that the return value could be checked.  But I could not get it to work
-# so falling back to the above simpler implementation
-
-def _upgrade_extension_win(extension_manager, zxp_path):
-    import ctypes
-    import ctypes.wintypes
-
-    # Need to run with elevated privs on windows.  It ain't pretty
-    INFINITE = -1
-    WAIT_FAILED = 0xFFFFFFFF
-    WAIT_OBJECT_0 = 0x00000000L
-    SEE_MASK_NOCLOSEPROCESS = 0x00000040
-
-    class SHELLEXECUTEINFO(ctypes.Structure):
-        _fields_ = (
-            ("cbSize", ctypes.wintypes.DWORD),
-            ("fMask", ctypes.c_ulong),
-            ("hwnd", ctypes.wintypes.HANDLE),
-            ("lpVerb", ctypes.c_char_p),
-            ("lpFile", ctypes.c_char_p),
-            ("lpParameters", ctypes.c_char_p),
-            ("lpDirectory", ctypes.c_char_p),
-            ("nShow", ctypes.c_int),
-            ("hInstApp", ctypes.wintypes.HINSTANCE),
-            ("lpIDList", ctypes.c_void_p),
-            ("lpClass", ctypes.c_char_p),
-            ("hKeyClass", ctypes.wintypes.HKEY),
-            ("dwHotKey", ctypes.wintypes.DWORD),
-            ("hIconOrMonitor", ctypes.wintypes.HANDLE),
-            ("hProcess", ctypes.wintypes.HANDLE),
-        )
-
-    ShellExecuteEx = ctypes.windll.shell32.ShellExecuteEx
-    ShellExecuteEx.restype = ctypes.wintypes.BOOL
-
-    sei = SHELLEXECUTEINFO()
-    sei.cbSize = ctypes.sizeof(sei)
-    sei.fMask = SEE_MASK_NOCLOSEPROCESS
-    sei.lpVerb = "runas"
-    sei.lpFile = extension_manager
-    sei.lpParameters = "-install zxp=\\\"\\\"\\\"%s\\\"\\\"\\\"" % zxp_path
-    sei.nShow = 0
-    ret = bool(ShellExecuteEx(ctypes.byref(sei)))
-
-    # Initial call failed entirely
-    if not ret:
-        error = subprocess.CalledProcessError(ret, extension_manager)
-        raise error
-
-    # A valid process was not created
-    ret = ctypes.cast(sei.hInstApp, ctypes.c_void_p).value
-    if not ret > 32:
-        error = subprocess.CalledProcessError(ret, extension_manager)
-        raise error
-
-    # No handle was returned
-    if sei.hProcess is None:
-        error = subprocess.CalledProcessError(ret, extension_manager)
-        raise error
-
-    # Wait for the run to finish
-    ret = ctypes.windll.kernel32.WaitForSingleObject(sei.hProcess, INFINITE)
-    if ret == WAIT_FAILED:
-        raise ctypes.WinError()
-
-    # Now get the real return value
-    ret = ctypes.c_int(0)
-    p_ret = ctypes.pointer(ret)
-    win_ret = ctypes.windll.kernel32.GetExitCodeProcess(sei.hProcess, p_ret)
-
-    # See if get exit code worked
-    if win_ret == 0:
-        raise ctypes.WinError()
-
-    # And finally the actual return code
-    if not ret == 0:
-        error = subprocess.CalledProcessError(ret, extension_manager)
-        raise error
-
-    # clean up
-    ret = ctypes.windll.kernel32.CloseHandle(sei.hProcess)
-    if ret == 0:
-        raise ctypes.WinError()
-"""

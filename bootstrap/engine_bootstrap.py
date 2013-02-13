@@ -38,9 +38,12 @@ sys.path.insert(0, api_path)
 # initalize photoshop
 try:
     import photoshop
+    import photoshop_extension_manager
     logger.debug(sys.argv)
     remote_port = int(sys.argv[1])
     photoshop.initialize_photoshop_application(remote_port)
+    # if we made it here, tag the extension version
+    photoshop_extension_manager.tag()
 except Exception, e:
     logger.exception('Failed to initialize photoshop app')
     sys.exit(1)
