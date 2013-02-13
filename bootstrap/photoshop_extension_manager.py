@@ -123,6 +123,7 @@ def _upgrade_extension_win(extension_manager, zxp_path):
     WAIT_FAILED = 0xFFFFFFFF
     WAIT_OBJECT_0 = 0x00000000L
     SEE_MASK_NOCLOSEPROCESS = 0x00000040
+    FALSE = 0
 
     class SHELLEXECUTEINFO(ctypes.Structure):
         _fields_ = (
@@ -151,10 +152,10 @@ def _upgrade_extension_win(extension_manager, zxp_path):
     sei.fMask = SEE_MASK_NOCLOSEPROCESS
     sei.lpVerb = "runas"
     sei.lpFile = extension_manager
-    sei.lpParameters = "-install zxp=\\\"\\\"\\\"%s\\\"\\\"\\\"" % zxp_path
+    sei.lpParameters = "-suppress -install zxp=\"%s\"" % zxp_path
     sei.nShow = 0
     ret = bool(ShellExecuteEx(ctypes.byref(sei)))
-
+    
     # Initial call failed entirely
     if not ret:
         error = subprocess.CalledProcessError(ret, extension_manager)
@@ -177,21 +178,20 @@ def _upgrade_extension_win(extension_manager, zxp_path):
         raise ctypes.WinError()
 
     # Now get the real return value
-    ret = ctypes.c_int(0)
-    p_ret = ctypes.pointer(ret)
-    win_ret = ctypes.windll.kernel32.GetExitCodeProcess(sei.hProcess, p_ret)
+    ret = ctypes.wintypes.DWORD(0)
+    win_ret = ctypes.windll.kernel32.GetExitCodeProcess(sei.hProcess, ctypes.byref(ret))
 
     # See if get exit code worked
-    if win_ret == 0:
+    if win_ret == FALSE:
         raise ctypes.WinError()
 
     # And finally the actual return code
-    if not ret == 0:
+    if ret.value != 0:
         error = subprocess.CalledProcessError(ret, extension_manager)
         raise error
 
     # clean up
     ret = ctypes.windll.kernel32.CloseHandle(sei.hProcess)
-    if ret == 0:
+    if ret == FALSE:
         raise ctypes.WinError()
 """
