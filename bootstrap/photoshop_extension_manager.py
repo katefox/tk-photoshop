@@ -51,6 +51,7 @@ def _save_config(config):
     config_dir = os.path.dirname(config_fname)
     if not os.path.exists(config_dir):
         os.makedirs(config_dir)
+
     # Save out the updated config
     fp = open(config_fname, "wb")
     try:
