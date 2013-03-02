@@ -9,7 +9,7 @@ QWidget
     selection-color: rgb(26, 26, 26);
 }
 
-QFrame, QLineEdit, QComboBox, QSpinBox
+QLineEdit, QComboBox, QSpinBox
 {
     background-color: rgb(35, 35, 35)
 }     
