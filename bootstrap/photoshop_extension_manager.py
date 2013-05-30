@@ -117,8 +117,11 @@ def _upgrade_extension():
     else:
         raise ValueError("unsupported platform: %s" % sys.platform)
 
-    process = subprocess.Popen(args, stdout=subprocess.PIPE)
-    output, _ = process.communicate()
+    # Note: Tie stdin to a PIPE as well to avoid this python bug on windows
+    # http://bugs.python.org/issue3905
+    process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process.stdin.close()
+    output, errput = process.communicate()
     ret = process.poll()
     if ret:
         error = subprocess.CalledProcessError(ret, args[0])
