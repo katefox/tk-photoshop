@@ -48,7 +48,7 @@ class LogConsole(QtGui.QWidget):
     def __init__(self, parent=None):
         super(LogConsole, self).__init__(parent)
 
-        self.setWindowTitle('Tank Photoshop Logs')
+        self.setWindowTitle('Shotgun Photoshop Logs')
         self.layout = QtGui.QVBoxLayout(self)
         self.logs = QtGui.QPlainTextEdit(self)
         self.layout.addWidget(self.logs)

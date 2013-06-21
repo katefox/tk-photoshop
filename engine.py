@@ -93,7 +93,7 @@ class PhotoshopEngine(tank.platform.Engine):
 
             # create the proxy QWidget:
             self._win32_proxy_win = QtGui.QWidget()
-            self._win32_proxy_win.setWindowTitle('tank dialog owner proxy')
+            self._win32_proxy_win.setWindowTitle('sgtk dialog owner proxy')
 
             proxy_win_hwnd = win_32_api.qwidget_winid_to_hwnd(self._win32_proxy_win.winId())
 
