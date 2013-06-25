@@ -39,7 +39,7 @@ try:
         sys.__excepthook__(type, value, tb)
     sys.execpthook = logging_excepthook
 except Exception, e:
-    msgbox("Shotgun pipeline toolkit failed to initialize logging:\n\n%s" % e)
+    msgbox("Shotgun Pipeline Toolkit failed to initialize logging:\n\n%s" % e)
     raise
 
 # setup sys path to include photoshop API
@@ -57,7 +57,7 @@ try:
     # if we made it here, tag the extension version
     photoshop_extension_manager.tag()
 except Exception, e:
-    msgbox("Shotgun pipeline toolkit failed to initialize photoshop api:\n\n%s" % e)
+    msgbox("Shotgun Pipeline Toolkit failed to initialize photoshop api:\n\n%s" % e)
     logger.exception('Failed to initialize photoshop api')
     sys.exit(1)
 
@@ -68,7 +68,7 @@ try:
     from PySide import QtGui
     from tk_photoshop import logging_console
 except Exception, e:
-    msgbox("Shotgun pipeline toolkit failed to initialize PySide.  Is it installed?")
+    msgbox("Shotgun Pipeline Toolkit failed to initialize PySide.  Is it installed?")
     logger.exception("Failed to initialize PySide.")
     sys.exit(1)
 
