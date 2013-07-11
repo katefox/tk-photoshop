@@ -25,6 +25,14 @@ class PhotoshopEngine(tank.platform.Engine):
         self._init_logging()
         self.log_debug("%s: Initializing...", self)
         self.__created_qt_dialogs = []
+        
+        # tell QT to handle text strings as utf-8 by default
+        from PySide import QtCore
+        utf8 = QtCore.QTextCodec.codecForName("utf-8")
+        QtCore.QTextCodec.setCodecForCStrings(utf8)
+
+
+        
 
     def post_app_init(self):
         import tk_photoshop
