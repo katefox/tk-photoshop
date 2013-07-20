@@ -172,7 +172,9 @@ class FlexRequest(object):
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(('127.0.0.1', self.remote_port))
             s.send(struct.pack("i", PYTHON_REQUEST))
-            s.send(etree.tostring(request))
+            req_str = etree.tostring(request) 
+            s.send(req_str)
+            self.logger.debug("--> Sending Flex Request: %s" % req_str)
             s.close()
 
             # wait for response to come through
@@ -194,6 +196,7 @@ class FlexRequest(object):
 
             # response is now available, grab it
             result = self.requests[uid]['response']
+            self.logger.debug("<-- Got Flex Response: %s" % result)
         except:
             self.logger.exception("Error in FlexRequest.__call__")
             raise
@@ -319,6 +322,7 @@ class RemoteObject(object):
             }
             results = FlexRequest(json.dumps(request))()
             results = json.loads(results)
+            self._logger.debug("Remote Object Constructor Returned: %s" % results)
             self._uid = results['obj_uid']
 
     def __repr__(self):
@@ -326,6 +330,9 @@ class RemoteObject(object):
 
     def __getattr__(self, attr):
         # check if attr is an accessor
+        
+        self._logger.debug("Get Attribute '%s' @ %s" % (attr, self))
+        
         accessor = None
         accessors = self._dom.findall('factory/accessor')
         for candidate in accessors:
