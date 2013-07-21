@@ -59,6 +59,10 @@ class FlexRequest(object):
 
     @classmethod
     def ActivatePython(cls):
+        """
+        This method will send a signal to Photoshop which will set the foreground window to
+        be the QT window.
+        """
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(('127.0.0.1', cls.remote_port))
         s.send(struct.pack("i", ACTIVATE_PYTHON))

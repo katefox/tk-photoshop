@@ -51,6 +51,66 @@ class PhotoshopEngine(tank.platform.Engine):
 
     ##########################################################################################
     # UI
+    
+    def _define_qt_base(self):
+        """
+        This will be called at initialisation time and will allow 
+        a user to control various aspects of how QT is being used
+        by Tank. The method should return a dictionary with a number
+        of specific keys, outlined below. 
+        
+        * qt_core - the QtCore module to use
+        * qt_gui - the QtGui module to use
+        * dialog_base - base class for to use for Tank's dialog factory
+        
+        :returns: dict
+        """
+        base = {}
+        from PySide import QtCore, QtGui
+        base["qt_core"] = QtCore
+        base["qt_gui"] = QtGui
+        base["dialog_base"] = QtGui.QDialog
+        
+        # now also redefine the method calls for QMessageBox static methods. These are 
+        # often called from within apps and because QT is running in a separate process, they 
+        # will pop up behind the photoshop window.
+        # wrap each of these calls in a raise method to activate the QT process.
+        
+        information_fn = QtGui.QMessageBox.information
+        critical_fn = QtGui.QMessageBox.critical
+        question_fn = QtGui.QMessageBox.question
+        warning_fn = QtGui.QMessageBox.warning
+        
+        @staticmethod
+        def _info_wrapper(*args, **kwargs):
+            FlexRequest.ActivatePython()
+            information_fn(*args, **kwargs)
+        
+        @staticmethod
+        def _critical_wrapper(*args, **kwargs):
+            FlexRequest.ActivatePython()
+            critical_fn(*args, **kwargs)
+        
+        @staticmethod
+        def _question_wrapper(*args, **kwargs):
+            FlexRequest.ActivatePython()
+            question_fn(*args, **kwargs)
+        
+        @staticmethod
+        def _warning_wrapper(*args, **kwargs):
+            FlexRequest.ActivatePython()
+            warning_fn(*args, **kwargs)
+
+        QtGui.QMessageBox.information = _info_wrapper
+        QtGui.QMessageBox.critical = _critical_wrapper
+        QtGui.QMessageBox.question = _question_wrapper
+        QtGui.QMessageBox.warning = _warning_wrapper
+        
+        return base
+        
+        
+    
+    
     def _win32_get_photoshop_process_id(self):
         """
         Windows specific method to find the process id of Photoshop.  This
@@ -258,3 +318,5 @@ class PhotoshopEngine(tank.platform.Engine):
 
     def log_exception(self, msg, *args, **kwargs):
         self._logger.exception(msg, *args, **kwargs)
+
+

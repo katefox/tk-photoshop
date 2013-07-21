@@ -64,9 +64,13 @@ def initialize_photoshop_application(remote_port):
         log_exception('error in initializePhotoshopApplication')
 
 
-# setup gui utilities
 ################################################################################
+# setup gui utilities
+
 def messageBox(text):
+    """
+    LEGACY -- DO NOT USE.
+    """
     try:
         from tank.platform.qt import QtGui, QtCore
         msg = QtGui.QMessageBox()
