@@ -84,22 +84,22 @@ class PhotoshopEngine(tank.platform.Engine):
         @staticmethod
         def _info_wrapper(*args, **kwargs):
             FlexRequest.ActivatePython()
-            information_fn(*args, **kwargs)
+            return information_fn(*args, **kwargs)
         
         @staticmethod
         def _critical_wrapper(*args, **kwargs):
             FlexRequest.ActivatePython()
-            critical_fn(*args, **kwargs)
+            return critical_fn(*args, **kwargs)
         
         @staticmethod
         def _question_wrapper(*args, **kwargs):
             FlexRequest.ActivatePython()
-            question_fn(*args, **kwargs)
+            return question_fn(*args, **kwargs)
         
         @staticmethod
         def _warning_wrapper(*args, **kwargs):
             FlexRequest.ActivatePython()
-            warning_fn(*args, **kwargs)
+            return warning_fn(*args, **kwargs)
 
         QtGui.QMessageBox.information = _info_wrapper
         QtGui.QMessageBox.critical = _critical_wrapper
@@ -282,7 +282,7 @@ class PhotoshopEngine(tank.platform.Engine):
                 # show dialog:
                 status = dialog.exec_()
             except Exception, e:
-                self.log_error("Error showing modal dialog: %s", e)
+                self.log_error("Error showing modal dialog: %s" % e)
             finally:
                 # kinda important to ensure we restore other window state:
                 for hwnd, state in saved_state:
