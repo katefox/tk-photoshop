@@ -125,11 +125,24 @@ def _upgrade_extension():
 
     # Note: Tie stdin to a PIPE as well to avoid this python bug on windows
     # http://bugs.python.org/issue3905
-    process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) 
     process.stdin.close()
-    output, errput = process.communicate()
+    
+    # Popen.communicate() doesn't play nicely if the stdin pipe is closed
+    # as it tries to flush it causing an 'I/O error on closed file' error
+    # when run from a terminal
+    #
+    # to avoid this, lets just poll the output from the process until
+    # it's finished
+    output_lines = []
+    while True:
+        line = process.stdout.readline()
+        if not line:
+            break
+        output_lines.append(line)
     ret = process.poll()
+    
     if ret:
         error = subprocess.CalledProcessError(ret, args[0])
-        error.output = output
+        error.output = "\n".join(output_lines)
         raise error
