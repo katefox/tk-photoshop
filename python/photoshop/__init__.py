@@ -52,6 +52,8 @@ def add_button(label, callback):
 def RemoteObject(cls, *args, **kwargs):
     return flexbase.RemoteObject(cls, *args, **kwargs)
 
+def StaticObject(cls, prop):
+    return flexbase.requestStatic(cls, prop)
 
 # plugin initialization will call the app setup
 def initialize_photoshop_application(remote_port):
