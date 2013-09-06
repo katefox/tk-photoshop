@@ -14,7 +14,7 @@ import sys
 import subprocess
 import ConfigParser
 
-CURRENT_EXTENSION = "0.1.1"
+CURRENT_EXTENSION = "0.1.2"
 ENV_VAR = "TANK_PHOTOSHOP_EXTENSION_MANAGER"
 
 

@@ -309,6 +309,7 @@ class RemoteObject(object):
             del kwargs['uid']
         else:
             uid = None
+
         if kwargs:
             raise ValueError('unknown arguments to __init__: %s' % kwargs)
         self._cls = cls
@@ -332,11 +333,41 @@ class RemoteObject(object):
     def __repr__(self):
         return "<%s %s>" % (self._cls, self._uid)
 
-    def __getattr__(self, attr):
+    def __setattr__(self, attr, value):
+        if attr.startswith('_'):
+            super(RemoteObject, self).__setattr__(attr, value)
+            return
+
+        self._logger.debug("%s.__setattr__(%s, %s)", self, attr, value)
+
         # check if attr is an accessor
-        
-        self._logger.debug("Get Attribute '%s' @ %s" % (attr, self))
-        
+        accessor = None
+        accessors = self._dom.findall('factory/accessor')
+        for candidate in accessors:
+            if candidate.get('name') == attr:
+                accessor = candidate
+                break
+        if accessor is not None:
+            if accessor.get('access') == 'readonly':
+                raise ValueError("attempting to set a readonly property '%s'" % attr)
+            request = {
+                'type': 'setprop',
+                'obj': pythonToDict(self),
+                'prop': attr,
+                'value': pythonToDict(value),
+            }
+            results = FlexRequest(json.dumps(request))()
+
+            # check results in case an error occurred
+            results = json.loads(results)
+            dictToPython(results)
+
+    def __getattr__(self, attr):
+        if attr.startswith('_'):
+            cls = self.__dict__.get('_cls', None)
+            raise AttributeError("%s has no attribute '%s'" % (cls, attr))
+
+        # check if attr is an accessor
         accessor = None
         accessors = self._dom.findall('factory/accessor')
         for candidate in accessors:
