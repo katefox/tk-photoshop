@@ -125,9 +125,9 @@ def _upgrade_extension():
 
     # Note: Tie stdin to a PIPE as well to avoid this python bug on windows
     # http://bugs.python.org/issue3905
-    process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) 
+    process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     process.stdin.close()
-    
+
     # Popen.communicate() doesn't play nicely if the stdin pipe is closed
     # as it tries to flush it causing an 'I/O error on closed file' error
     # when run from a terminal
@@ -141,8 +141,8 @@ def _upgrade_extension():
             break
         output_lines.append(line)
     ret = process.poll()
-    
+
     if ret:
-        error = subprocess.CalledProcessError(ret, args[0])
-        error.output = "\n".join(output_lines)
-        raise error
+        # Return value of Extension manager is not reliable, so just warn
+        print "WARNING: Extension manager returned a non-zero value."
+        print "\n".join(output_lines)
