@@ -30,13 +30,11 @@ class PhotoshopEngine(tank.platform.Engine):
     def init_engine(self):
         self._init_logging()
         self.log_debug("%s: Initializing...", self)
-        self.__created_qt_dialogs = []
         
         # tell QT to handle text strings as utf-8 by default
         from PySide import QtCore
         utf8 = QtCore.QTextCodec.codecForName("utf-8")
         QtCore.QTextCodec.setCodecForCStrings(utf8)
-
 
         
 
@@ -182,24 +180,12 @@ class PhotoshopEngine(tank.platform.Engine):
 
         return self._win32_proxy_win
 
-    def _create_dialog(self, title, bundle, widget_class, *args, **kwargs):
+
+    def _get_dialog_parent(self):
         """
-        Create the standard Tank dialog, with ownership assigned to the main photoshop
-        application window if possible.
-
-        :param title: The title of the window
-        :param bundle: The app, engine or framework object that is associated with this window
-        :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
-
-        Additional parameters specified will be passed through to the widget_class constructor.
-
-        :returns: the created widget_class instance
+        Get the QWidget parent for all dialogs created through
+        show_dialog & show_modal.
         """
-        from tank.platform.qt import tankqdialog
-
-        # first construct the widget object
-        obj = widget_class(*args, **kwargs)
-
         # determine the parent widget to use:
         parent_widget = None
         if sys.platform == "win32":
@@ -207,19 +193,17 @@ class PhotoshopEngine(tank.platform.Engine):
             # main application window that we can then set as the owner
             # for all Tank dialogs
             parent_widget = self._win32_get_proxy_window()
+            
+        return parent_widget
 
-        # now construct the dialog:
-        dialog = tankqdialog.TankQDialog(title, bundle, obj, parent_widget)
-        FlexRequest.ActivatePython()
-        dialog.raise_()
-        dialog.activateWindow()
-
-        # keep a reference to all created dialogs to make GC happy
-        if dialog:
-            self.__created_qt_dialogs.append(dialog)
-
-        return dialog, obj
-
+    def _on_dialog_closed(self, dlg):
+        """
+        Overide base class implementation handling dialog closed.  The Photoshop
+        engine currently has to keep hold of the dialogs as releasing them can 
+        result in unexpected crashes.
+        """
+        pass
+    
     def show_dialog(self, title, bundle, widget_class, *args, **kwargs):
         """
         Shows a non-modal dialog window in a way suitable for this engine.
@@ -235,12 +219,26 @@ class PhotoshopEngine(tank.platform.Engine):
         """
         debug_force_modal = False  # debug switch for testing modal dialog
         if debug_force_modal:
-            status, obj = self.show_modal(title, bundle, widget_class, *args, **kwargs)
-            return obj
+            # debug only - show modal instead
+            status, widget = self.show_modal(title, bundle, widget_class, *args, **kwargs)
+            return widget
         else:
-            dialog, obj = self._create_dialog(title, bundle, widget_class, *args, **kwargs)
+            # create the dialog:
+            res = self._create_dialog(title, bundle, widget_class, *args, **kwargs)
+            if not res:
+                return
+            dialog, widget = res
+            
+            # make sure the window raised so it doesn't
+            # appear behind the main Photoshop window
+            FlexRequest.ActivatePython()
+            dialog.raise_()
+            dialog.activateWindow()
+                        
+            # show the dialog:
             dialog.show()
-            return obj
+            
+            return widget
 
     def show_modal(self, title, bundle, widget_class, *args, **kwargs):
         """
@@ -258,7 +256,13 @@ class PhotoshopEngine(tank.platform.Engine):
         """
         from PySide import QtGui
         
-        dialog, obj = self._create_dialog(title, bundle, widget_class, *args, **kwargs)
+        res = self._create_dialog(title, bundle, widget_class, *args, **kwargs)
+        if not res:
+            return
+        dialog, widget = res
+        
+        # make sure the window raised so it doesn't
+        # appear behind the main Photoshop window
         FlexRequest.ActivatePython()
         dialog.raise_()
         dialog.activateWindow()
@@ -292,7 +296,7 @@ class PhotoshopEngine(tank.platform.Engine):
             # show dialog:
             status = dialog.exec_()
 
-        return status, obj
+        return status, widget
 
     ##########################################################################################
     # logging
