@@ -30,12 +30,8 @@ class PhotoshopEngine(tank.platform.Engine):
     def init_engine(self):
         self._init_logging()
         self.log_debug("%s: Initializing...", self)
-        
-        # tell QT to handle text strings as utf-8 by default
-        from PySide import QtCore
-        utf8 = QtCore.QTextCodec.codecForName("utf-8")
-        QtCore.QTextCodec.setCodecForCStrings(utf8)
 
+        self.__qt_dialogs = []
         
 
     def post_app_init(self):
@@ -68,6 +64,10 @@ class PhotoshopEngine(tank.platform.Engine):
         base["qt_core"] = QtCore
         base["qt_gui"] = QtGui
         base["dialog_base"] = QtGui.QDialog
+        
+        # tell QT to handle text strings as utf-8 by default
+        utf8 = QtCore.QTextCodec.codecForName("utf-8")
+        QtCore.QTextCodec.setCodecForCStrings(utf8)
         
         # now also redefine the method calls for QMessageBox static methods. These are 
         # often called from within apps and because QT is running in a separate process, they 
@@ -160,7 +160,7 @@ class PhotoshopEngine(tank.platform.Engine):
         ps_hwnd = self._win32_get_photoshop_main_hwnd()
         if ps_hwnd != None:
 
-            from PySide import QtGui
+            from tank.platform.qt import QtGui
             from tk_photoshop import win_32_api
 
             # create the proxy QWidget:
@@ -193,17 +193,12 @@ class PhotoshopEngine(tank.platform.Engine):
             # main application window that we can then set as the owner
             # for all Tank dialogs
             parent_widget = self._win32_get_proxy_window()
+        else:
+            from tank.platform.qt import QtGui
+            parent_widget = QtGui.QApplication.activeWindow()
             
         return parent_widget
 
-    def _on_dialog_closed(self, dlg):
-        """
-        Overide base class implementation handling dialog closed.  The Photoshop
-        engine currently has to keep hold of the dialogs as releasing them can 
-        result in unexpected crashes.
-        """
-        pass
-    
     def show_dialog(self, title, bundle, widget_class, *args, **kwargs):
         """
         Shows a non-modal dialog window in a way suitable for this engine.
@@ -217,28 +212,31 @@ class PhotoshopEngine(tank.platform.Engine):
 
         :returns: the created widget_class instance
         """
-        debug_force_modal = False  # debug switch for testing modal dialog
-        if debug_force_modal:
-            # debug only - show modal instead
-            status, widget = self.show_modal(title, bundle, widget_class, *args, **kwargs)
-            return widget
-        else:
-            # create the dialog:
-            res = self._create_dialog(title, bundle, widget_class, *args, **kwargs)
-            if not res:
-                return
-            dialog, widget = res
-            
-            # make sure the window raised so it doesn't
-            # appear behind the main Photoshop window
-            FlexRequest.ActivatePython()
-            dialog.raise_()
-            dialog.activateWindow()
-                        
-            # show the dialog:
-            dialog.show()
-            
-            return widget
+        if not self.has_ui:
+            self.log_error("Sorry, this environment does not support UI display! Cannot show "
+                           "the requested window '%s'." % title)
+            return
+        
+        # create the dialog:
+        dialog, widget = self._create_dialog_with_widget(title, bundle, widget_class, *args, **kwargs)
+        
+        # Note - the base engine implementation will try to clean up
+        # dialogs and widgets after they've been closed.  However this
+        # can cause a crash in Photoshop as the system may try to send 
+        # an event after the dialog has been deleted.
+        # Keeping track of all dialogs will ensure this doesn't happen
+        self.__qt_dialogs.append(dialog)
+
+        # make sure the window raised so it doesn't
+        # appear behind the main Photoshop window
+        FlexRequest.ActivatePython()
+        dialog.raise_()
+        dialog.activateWindow()
+                    
+        # show the dialog:
+        dialog.show()
+        
+        return widget
 
     def show_modal(self, title, bundle, widget_class, *args, **kwargs):
         """
@@ -254,12 +252,22 @@ class PhotoshopEngine(tank.platform.Engine):
 
         :returns: (a standard QT dialog status return code, the created widget_class instance)
         """
-        from PySide import QtGui
+        if not self.has_ui:
+            self.log_error("Sorry, this environment does not support UI display! Cannot show "
+                           "the requested window '%s'." % title)
+            return        
         
-        res = self._create_dialog(title, bundle, widget_class, *args, **kwargs)
-        if not res:
-            return
-        dialog, widget = res
+        from tank.platform.qt import QtGui
+        
+        # create the dialog:
+        dialog, widget = self._create_dialog_with_widget(title, bundle, widget_class, *args, **kwargs)
+        
+        # Note - the base engine implementation will try to clean up
+        # dialogs and widgets after they've been closed.  However this
+        # can cause a crash in Photoshop as the system may try to send 
+        # an event after the dialog has been deleted.      
+        # Keeping track of all dialogs will ensure this doesn't happen  
+        self.__qt_dialogs.append(dialog)
         
         # make sure the window raised so it doesn't
         # appear behind the main Photoshop window
