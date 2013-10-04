@@ -15,7 +15,7 @@ import subprocess
 import ConfigParser
 
 CURRENT_EXTENSION = "0.1.2"
-ENV_VAR = "TANK_PHOTOSHOP_EXTENSION_MANAGER"
+ENV_VAR = "SGTK_PHOTOSHOP_EXTENSION_MANAGER"
 
 
 def update():
@@ -33,7 +33,7 @@ def tag():
 
 
 # - Internal -------------------------------------------------------------------
-_APPNAME = "com.shotgunsoftware.TankPython"
+_APPNAME = "com.shotgunsoftware.SgTkPhotoshopEngine"
 _CSIDL_LOCAL_APPDATA = 28
 
 
@@ -77,7 +77,7 @@ def _get_conf_fname():
 
 def _get_osx_fname():
     folder = os.path.join(os.path.expanduser('~/Library/Application Support/'), _APPNAME)
-    return os.path.join(folder, "TankPython.ini")
+    return os.path.join(folder, "Extension.ini")
 
 
 def _get_win_fname():
@@ -114,7 +114,7 @@ def _upgrade_extension():
     except KeyError:
         raise ValueError("Could not open extension manager from env var %s" % ENV_VAR)
 
-    zxp_path = os.path.normpath(os.path.join(__file__, "..", "..", "Tank.zxp"))
+    zxp_path = os.path.normpath(os.path.join(__file__, "..", "..", "SgTkPhotoshopEngine.zxp"))
     if sys.platform == "darwin":
         # Run the executable directly from within the bundle
         args = ['open', '-W', zxp_path]

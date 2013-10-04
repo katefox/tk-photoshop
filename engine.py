@@ -9,7 +9,7 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 """
-A Photoshop engine for Tank.
+A Photoshop engine for Toolkit.
 """
 import os
 import sys
@@ -21,9 +21,9 @@ from photoshop.flexbase import FlexRequest
 
 
 ###############################################################################################
-# The Tank Photoshop engine
+# The Toolkit Photoshop engine
 class PhotoshopEngine(tank.platform.Engine):
-    _logger = logging.getLogger('tank.photoshop.engine')
+    _logger = logging.getLogger('sgtk.photoshop.engine')
 
     ##########################################################################################
     # init and destroy
@@ -50,12 +50,12 @@ class PhotoshopEngine(tank.platform.Engine):
         """
         This will be called at initialisation time and will allow 
         a user to control various aspects of how QT is being used
-        by Tank. The method should return a dictionary with a number
+        by Toolkit. The method should return a dictionary with a number
         of specific keys, outlined below. 
         
         * qt_core - the QtCore module to use
         * qt_gui - the QtGui module to use
-        * dialog_base - base class for to use for Tank's dialog factory
+        * dialog_base - base class for to use for Toolkit's dialog factory
         
         :returns: dict
         """
@@ -148,7 +148,7 @@ class PhotoshopEngine(tank.platform.Engine):
 
     def _win32_get_proxy_window(self):
         """
-        Windows specific method to get the proxy window that will 'own' all Tank dialogs.  This
+        Windows specific method to get the proxy window that will 'own' all Toolkit dialogs.  This
         will be parented to the main photoshop application.  Creates the proxy window
         if it doesn't already exist.
         """
@@ -191,7 +191,7 @@ class PhotoshopEngine(tank.platform.Engine):
         if sys.platform == "win32":
             # for windows, we create a proxy window parented to the
             # main application window that we can then set as the owner
-            # for all Tank dialogs
+            # for all Toolkit dialogs
             parent_widget = self._win32_get_proxy_window()
         else:
             from tank.platform.qt import QtGui
@@ -310,11 +310,11 @@ class PhotoshopEngine(tank.platform.Engine):
     # logging
 
     def _init_logging(self):
-        tank_logger = logging.getLogger('tank')
+        toolkit_logger = logging.getLogger('sgtk')
         if self.get_setting("debug_logging", False):
-            tank_logger.setLevel(logging.DEBUG)
+            toolkit_logger.setLevel(logging.DEBUG)
         else:
-            tank_logger.setLevel(logging.INFO)
+            toolkit_logger.setLevel(logging.INFO)
 
     def log_debug(self, msg, *args, **kwargs):
         self._logger.debug(msg, *args, **kwargs)

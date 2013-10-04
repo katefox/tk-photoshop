@@ -33,7 +33,7 @@ class PanelGenerator(object):
 
     def populate_panel(self):
         """
-        Render the entire Tank panel.
+        Render the entire Toolkit panel.
         """
         # slight hack here but first ensure that the panel is empty
         photoshop.clear_panel()
@@ -81,7 +81,7 @@ class PanelGenerator(object):
 
         #ctx = self._engine.context
         #ctx_name = str(ctx)
-        # todo: display context on menu (requires tank core 0.12.7+)
+        # todo: display context on menu (requires sgtk core 0.12.7+)
 
         # create the panel object
         photoshop.add_button("Jump to Shotgun", self._jump_to_sg)

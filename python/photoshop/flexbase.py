@@ -51,7 +51,7 @@ class FlexRequest(object):
         cls.callbacks = {}
         cls.remote_port = remote_port
         cls.local_port = None
-        cls.logger = logging.getLogger('tank.photoshop.flexbase.FlexRequest')
+        cls.logger = logging.getLogger('sgtk.photoshop.flexbase.FlexRequest')
         server = threading.Thread(target=cls.ListenThreadRun, name="FlexListenThread")
         heartbeat = threading.Thread(target=cls.HeartbeatThreadRun, name="HeartbeatThread")
         server.start()
@@ -250,7 +250,7 @@ def pythonToDict(v):
 
 
 def requestClearPanel():
-    logger = logging.getLogger('tank.photoshop.flexbase')
+    logger = logging.getLogger('sgtk.photoshop.flexbase')
     logger.debug("requestClearPanel()")
     request = {'type': 'clearpanel'}
     FlexRequest(json.dumps(request))()
@@ -258,7 +258,7 @@ def requestClearPanel():
 
 
 def requestAddButton(label, callback):
-    logger = logging.getLogger('tank.photoshop.flexbase')
+    logger = logging.getLogger('sgtk.photoshop.flexbase')
     logger.debug("requestAddButton('%s')", label)
     request = {
         'type': 'addbutton',
@@ -271,7 +271,7 @@ def requestAddButton(label, callback):
 
 
 def requestStatic(cls, prop):
-    logger = logging.getLogger('tank.photoshop.flexbase')
+    logger = logging.getLogger('sgtk.photoshop.flexbase')
     logger.debug("requestStatic('%s', '%s')", cls, prop)
     request = {
         'type': 'static',
@@ -284,7 +284,7 @@ def requestStatic(cls, prop):
 
 
 def requestClassDesc(cls):
-    logger = logging.getLogger('tank.photoshop.flexbase')
+    logger = logging.getLogger('sgtk.photoshop.flexbase')
     logger.debug("requestClassDesc('%s')", cls)
     request = {
         'type': 'classdef',
@@ -303,7 +303,7 @@ class RemoteObject(object):
     classMap = {}
 
     def __init__(self, cls, *args, **kwargs):
-        self._logger = logging.getLogger('tank.photoshop.flexbase.RemoteObject')
+        self._logger = logging.getLogger('sgtk.photoshop.flexbase.RemoteObject')
         if 'uid' in kwargs:
             uid = kwargs['uid']
             del kwargs['uid']
@@ -404,7 +404,7 @@ class RemoteMethod(object):
     def __init__(self, parent, method):
         self._parent = parent
         self._method = method
-        self._logger = logging.getLogger('tank.photoshop.flexbase.RemoteMethod')
+        self._logger = logging.getLogger('sgtk.photoshop.flexbase.RemoteMethod')
 
     def __call__(self, *args):
         name = self._method.get('name')

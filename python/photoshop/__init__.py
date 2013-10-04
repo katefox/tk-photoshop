@@ -17,7 +17,7 @@ import flexbase
 
 # setup logging
 ################################################################################
-logger = logging.getLogger('tank.photoshop')
+logger = logging.getLogger('sgtk.photoshop')
 
 
 def log_debug(msg, *args, **kwargs):

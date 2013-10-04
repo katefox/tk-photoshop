@@ -32,11 +32,11 @@ try:
         os.makedirs(log_dir)
     rotating = logging.handlers.RotatingFileHandler(os.path.join(log_dir, 'tk-photoshop.log'), maxBytes=4*1024*1024, backupCount=10)
     rotating.setFormatter(logging.Formatter('%(asctime)s [%(levelname) 8s] %(threadName)s %(name)s: %(message)s'))
-    logger = logging.getLogger('tank')
+    logger = logging.getLogger('sgtk')
     logger.addHandler(rotating)
     logger.setLevel(logging.INFO)
 
-    logger = logging.getLogger('tank.photoshop.PythonBootstrap')
+    logger = logging.getLogger('sgtk.photoshop.PythonBootstrap')
     logger.info('================================== Initializing Python Interpreter ===================================')
 
     # setup default exception handling to log
@@ -108,7 +108,7 @@ try:
     g_log = logging_console.LogConsole()
     g_app.setProperty("tk-photoshop.log_console", g_log)
     qt_handler = logging_console.QtLogHandler(g_log.logs)
-    logger = logging.getLogger('tank')
+    logger = logging.getLogger('sgtk')
     logger.addHandler(qt_handler)
     g_log.setHidden(True)
 except Exception, e:

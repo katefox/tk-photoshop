@@ -29,7 +29,7 @@ class RunCallbackEvent(QtCore.QEvent):
 
 
 class CallbackRunner(QtCore.QObject):
-    _logger = logging.getLogger('tank.photoshop.engine')
+    _logger = logging.getLogger('sgtk.photoshop.engine')
 
     def event(self, event):
         try:
