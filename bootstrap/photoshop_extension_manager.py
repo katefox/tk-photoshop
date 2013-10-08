@@ -1,11 +1,11 @@
 # Copyright (c) 2013 Shotgun Software Inc.
-# 
+#
 # CONFIDENTIAL AND PROPRIETARY
-# 
-# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit 
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
 # Source Code License included in this distribution package. See LICENSE.
-# By accessing, using, copying or modifying this work you indicate your 
-# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
@@ -14,7 +14,12 @@ import sys
 import subprocess
 import ConfigParser
 
-CURRENT_EXTENSION = "0.1.2"
+CURRENT_EXTENSION = "0.2.0"
+CURRENT_ZXP_PATH = os.path.normpath(os.path.join(__file__, "..", "..", "SgTkPhotoshopEngine.zxp"))
+
+VERSION_BEFORE_RENAME = "0.1.2"
+EXTENSION_NAME = "Shotgun Photoshop Engine"
+
 ENV_VAR = "SGTK_PHOTOSHOP_EXTENSION_MANAGER"
 
 
@@ -23,12 +28,16 @@ def update():
     config = _get_config()
     installed_version = config.get("Adobe Extension", "installed_version")
     if _version_cmp(CURRENT_EXTENSION, installed_version) > 0:
-        _upgrade_extension()
+        if _version_cmp(VERSION_BEFORE_RENAME, installed_version) >= 0:
+            uninstall_old = True
+        else:
+            uninstall_old = False
+        _upgrade_extension(uninstall_old)
 
 
-def tag():
+def tag(version):
     config = _get_config()
-    config.set("Adobe Extension", "installed_version", CURRENT_EXTENSION)
+    config.set("Adobe Extension", "installed_version", version)
     _save_config(config)
 
 
@@ -107,42 +116,61 @@ def _version_cmp(left, right):
     return cmp(normalize(left), normalize(right))
 
 
-def _upgrade_extension():
+def _upgrade_extension(uninstall = False):
     # Grab path to extension manager
     try:
         extension_manager = os.environ[ENV_VAR]
     except KeyError:
         raise ValueError("Could not open extension manager from env var %s" % ENV_VAR)
 
-    zxp_path = os.path.normpath(os.path.join(__file__, "..", "..", "SgTkPhotoshopEngine.zxp"))
     if sys.platform == "darwin":
-        # Run the executable directly from within the bundle
-        args = ['open', '-W', zxp_path]
+        args = [os.path.join(extension_manager, "Contents", "MacOS", "Adobe Extension Manager CS6")]
+        if uninstall:
+            args.extend(["-remove", 'product="Photoshop CS6"', 'extension="Shotgun Photoshop Engine"'])
+        calls = [args]
     elif sys.platform == "win32":
-        args = [extension_manager, "-install", 'zxp="%s"' % zxp_path]
+        calls = []
+        if uninstall:
+            calls.append([extension_manager, "-remove", 'product="Photoshop CS6 32"', 'extension="Shotgun Photoshop Engine"'])
     else:
         raise ValueError("unsupported platform: %s" % sys.platform)
 
-    # Note: Tie stdin to a PIPE as well to avoid this python bug on windows
-    # http://bugs.python.org/issue3905
-    process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    process.stdin.close()
+    if sys.platform == "darwin":
+        args = [os.path.join(extension_manager, "Contents", "MacOS", "Adobe Extension Manager CS6")]
+    elif sys.platform == "win32":
+        args = [extension_manager]
 
-    # Popen.communicate() doesn't play nicely if the stdin pipe is closed
-    # as it tries to flush it causing an 'I/O error on closed file' error
-    # when run from a terminal
-    #
-    # to avoid this, lets just poll the output from the process until
-    # it's finished
-    output_lines = []
-    while True:
-        line = process.stdout.readline()
-        if not line:
-            break
-        output_lines.append(line)
-    ret = process.poll()
+    args.extend(["-install", 'zxp="%s"' % CURRENT_ZXP_PATH])
+    calls.append(args)
 
-    if ret:
-        # Return value of Extension manager is not reliable, so just warn
-        print "WARNING: Extension manager returned a non-zero value."
-        print "\n".join(output_lines)
+    # Run each command as its own Extension Manager call because it doesn't handle multiple
+    # commands within a single call well.
+    for args in calls:
+        # Note: Tie stdin to a PIPE as well to avoid this python bug on windows
+        # http://bugs.python.org/issue3905
+        try:
+            process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            process.stdin.close()
+
+            # Popen.communicate() doesn't play nicely if the stdin pipe is closed
+            # as it tries to flush it causing an 'I/O error on closed file' error
+            # when run from a terminal
+            #
+            # to avoid this, lets just poll the output from the process until
+            # it's finished
+            output_lines = []
+            while True:
+                line = process.stdout.readline()
+                if not line:
+                    break
+                output_lines.append(line)
+            ret = process.poll()
+        except StandardError:
+            import traceback
+            ret = True
+            output_lines = traceback.format_exc().split()
+
+        if ret:
+            # Return value of Extension manager is not reliable, so just warn
+            print "WARNING: Extension manager returned a non-zero value."
+            print "\n".join(output_lines)

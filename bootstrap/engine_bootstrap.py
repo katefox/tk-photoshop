@@ -61,7 +61,8 @@ try:
     remote_port = int(sys.argv[1])
     photoshop.initialize_photoshop_application(remote_port)
     # if we made it here, tag the extension version
-    photoshop_extension_manager.tag()
+    bundle_version = sys.argv[2]
+    photoshop_extension_manager.tag(bundle_version)
 except Exception, e:
     msgbox("Shotgun Pipeline Toolkit failed to initialize photoshop api:\n\n%s" % e)
     logger.exception('Failed to initialize photoshop api')
