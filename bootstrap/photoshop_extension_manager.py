@@ -23,6 +23,17 @@ EXTENSION_NAME = "Shotgun Photoshop Engine"
 ENV_VAR = "SGTK_PHOTOSHOP_EXTENSION_MANAGER"
 
 
+# platform specific alert with no dependencies
+def msgbox(msg, button="Sorry!"):
+    if sys.platform == "win32":
+        import ctypes
+        MessageBox = ctypes.windll.user32.MessageBoxA
+        MessageBox(None, msg, "Shotgun", 0)
+    elif sys.platform == "darwin":
+        os.system("""osascript -e 'tell app "System Events" to activate""")
+        os.system("""osascript -e 'tell app "System Events" to display dialog "%s" with icon caution buttons "%s!"'""" % (msg, button))
+
+
 def update():
     # Upgrade if the installed version is out of date
     config = _get_config()
@@ -32,6 +43,14 @@ def update():
             uninstall_old = True
         else:
             uninstall_old = False
+        if uninstall_old:
+            msgbox("A new Shotgun Photoshop extensions is available.\n\n"
+                "Extension manager will run twice, once to remove the old extension "
+                "and once to install the new one.", button="Got it")
+        else:
+            msgbox("A new Shotgun Photoshop extensions is available.\n\n"
+                "Extension manager will now run to install the new version.",
+                button="Got it")
         _upgrade_extension(uninstall_old)
 
 
