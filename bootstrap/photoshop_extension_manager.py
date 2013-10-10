@@ -14,7 +14,7 @@ import sys
 import subprocess
 import ConfigParser
 
-CURRENT_EXTENSION = "0.2.0"
+CURRENT_EXTENSION = "1.0.0"
 CURRENT_ZXP_PATH = os.path.normpath(os.path.join(__file__, "..", "..", "SgTkPhotoshopEngine.zxp"))
 
 VERSION_BEFORE_RENAME = "0.1.2"
@@ -85,8 +85,14 @@ def _get_conf_fname():
 
 
 def _get_osx_fname():
+    try:
+        extension_manager = os.environ[ENV_VAR]
+    except KeyError:
+        raise ValueError("Could not open extension manager from env var %s" % ENV_VAR)
+    version = _guess_extension_manager_version(extension_manager)
+
     folder = os.path.join(os.path.expanduser('~/Library/Application Support/'), _APPNAME)
-    return os.path.join(folder, "Extension.ini")
+    return os.path.join(folder, "Extension_%s.ini" % version)
 
 
 def _get_win_fname():
@@ -107,7 +113,14 @@ def _get_win_fname():
             bfr = fix_bfr
 
     folder = bfr.value
-    return os.path.join(folder, "%s.ini" % _APPNAME)
+
+    try:
+        extension_manager = os.environ[ENV_VAR]
+    except KeyError:
+        raise ValueError("Could not open extension manager from env var %s" % ENV_VAR)
+    version = _guess_extension_manager_version(extension_manager)
+
+    return os.path.join(folder, "%s_%s.ini" % (_APPNAME, version))
 
 
 def _version_cmp(left, right):
@@ -123,54 +136,149 @@ def _upgrade_extension(uninstall = False):
     except KeyError:
         raise ValueError("Could not open extension manager from env var %s" % ENV_VAR)
 
-    if sys.platform == "darwin":
-        args = [os.path.join(extension_manager, "Contents", "MacOS", "Adobe Extension Manager CS6")]
-        if uninstall:
-            args.extend(["-remove", 'product="Photoshop CS6"', 'extension="Shotgun Photoshop Engine"'])
-        calls = [args]
-    elif sys.platform == "win32":
-        calls = []
-        if uninstall:
-            calls.append([extension_manager, "-remove", 'product="Photoshop CS6 32"', 'extension="Shotgun Photoshop Engine"'])
+    version = _guess_extension_manager_version(extension_manager)
+    if version == "CC":
+        _upgrade_cc(extension_manager, uninstall)
+    elif version == "CS6":
+        _upgrade_cs6(extension_manager, uninstall)
     else:
-        raise ValueError("unsupported platform: %s" % sys.platform)
+        raise NotImplementedError("Unsupported version of extension manager: %s" % version)
+
+
+def _upgrade_cs6(extension_manager, uninstall):
+    cmd = _guess_extension_manager_command(extension_manager)
+
+    if uninstall:
+        if sys.platform == "darwin":
+            product = "Photoshop CS6"
+        elif sys.platform == "win32":
+            product = "Photoshop CS6 64"
+
+        args = [cmd, "-remove", 'product="%s"' % product, 'extension="%s"' % EXTENSION_NAME]
+        _call_cmd(args)
+
+    # install the extension
+    args = [cmd, "-install", 'zxp="%s"' % CURRENT_ZXP_PATH]
+    _call_cmd(args)
+
+
+def _upgrade_cc(extension_manager, uninstall):
+    cmd = _guess_extension_manager_command(extension_manager)
 
     if sys.platform == "darwin":
-        args = [os.path.join(extension_manager, "Contents", "MacOS", "Adobe Extension Manager CS6")]
+        arg_prefix = "--"
     elif sys.platform == "win32":
-        args = [extension_manager]
+        arg_prefix = "/"
 
-    args.extend(["-install", 'zxp="%s"' % CURRENT_ZXP_PATH])
-    calls.append(args)
+    if uninstall:
+        # CC supports getting a list of installed extensions
+        args = [cmd, arg_prefix + "list", "all"]
+        (ret, lines) = _call_cmd(args)
 
-    # Run each command as its own Extension Manager call because it doesn't handle multiple
-    # commands within a single call well.
-    for args in calls:
-        # Note: Tie stdin to a PIPE as well to avoid this python bug on windows
-        # http://bugs.python.org/issue3905
+        # make sure we have valid output
+        found = False
+        for line in lines:
+            split = [word.strip() for word in line.split(" ") if word.strip()]
+            # each line is 'Status' 'Name', 'Version', status and version have no spaces
+            extension_name = " ".join(split[1:-1])
+            if extension_name == EXTENSION_NAME:
+                found = True
+                break
+
+        # only call uninstall if the extension is actually installed
+        if found:
+            args = [cmd, arg_prefix + "remove", EXTENSION_NAME]
+            (ret, lines) = _call_cmd(args)
+
+    # install the extension
+    args = [cmd, arg_prefix + "install", CURRENT_ZXP_PATH]
+    _call_cmd(args)
+
+
+def _call_cmd(args):
+    # Note: Tie stdin to a PIPE as well to avoid this python bug on windows
+    # http://bugs.python.org/issue3905
+    try:
+        process = subprocess.Popen(args,
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        process.stdin.close()
+
+        # Popen.communicate() doesn't play nicely if the stdin pipe is closed
+        # as it tries to flush it causing an 'I/O error on closed file' error
+        # when run from a terminal
+        #
+        # to avoid this, lets just poll the output from the process until
+        # it's finished
+        output_lines = []
+        while True:
+            line = process.stdout.readline()
+            if not line:
+                break
+            output_lines.append(line)
+        ret = process.poll()
+    except StandardError:
+        import traceback
+        ret = True
+        output_lines = traceback.format_exc().split()
+        output_lines.append("%s" % args)
+
+    if ret:
+        # Return value of Extension manager is not reliable, so just warn
+        print "WARNING: Extension manager returned a non-zero value."
+        print "%s" % args
+        print "\n".join(output_lines)
+
+    return (ret, output_lines)
+
+
+def _guess_extension_manager_command(extension_manager):
+    if sys.platform == "darwin":
+        # CC introduced a managment command
+        cmd = os.path.join(extension_manager, "Contents", "MacOS", "ExManCmd")
+        if os.path.exists(cmd):
+            return cmd
+
+        # Default is the name of the bundle
         try:
-            process = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            process.stdin.close()
+            bundle_name = os.path.basename(extension_manager).split('.')[0]
+            cmd = os.path.join(extension_manager, "Contents", "MacOS", bundle_name)
+            if os.path.exists(cmd):
+                return cmd
+        except:
+            raise ValueError("Expected path to Extension manager bundle (ending in .app).  Got %s." % extension_manager)
+    elif sys.platform == "win32":
+        # Try CC command name
+        cmd = os.path.join(os.path.dirname(extension_manager), "ExManCmd.exe")
+        if os.path.exists(cmd):
+            return cmd
 
-            # Popen.communicate() doesn't play nicely if the stdin pipe is closed
-            # as it tries to flush it causing an 'I/O error on closed file' error
-            # when run from a terminal
-            #
-            # to avoid this, lets just poll the output from the process until
-            # it's finished
-            output_lines = []
-            while True:
-                line = process.stdout.readline()
-                if not line:
-                    break
-                output_lines.append(line)
-            ret = process.poll()
-        except StandardError:
-            import traceback
-            ret = True
-            output_lines = traceback.format_exc().split()
+        cmd = os.path.join(os.path.dirname(extension_manager), "XManCommand.exe")
+        if os.path.exists(cmd):
+            return cmd
+    else:
+        raise NotImplementedError("unsupported platform: %s" % sys.platform)
 
-        if ret:
-            # Return value of Extension manager is not reliable, so just warn
-            print "WARNING: Extension manager returned a non-zero value."
-            print "\n".join(output_lines)
+    # Couldn't find the command to run
+    raise ValueError("Could not figure out extension manager cmd: %s" % extension_manager)
+
+
+def _guess_extension_manager_version(extension_manager):
+    if sys.platform == "darwin":
+        try:
+            bundle_name = os.path.basename(extension_manager).split('.')[0]
+            return bundle_name.split()[-1]
+        except:
+            raise ValueError("Expected path to Extension manager bundle (ending in .app).  Got %s." % extension_manager)
+    elif sys.platform == "win32":
+        # Try CC command name
+        cmd = os.path.join(os.path.dirname(extension_manager), "ExManCmd.exe")
+        if os.path.exists(cmd):
+            return "CC"
+
+        cmd = os.path.join(os.path.dirname(extension_manager), "XManCommand.exe")
+        if os.path.exists(cmd):
+            return "CS6"
+    else:
+        raise NotImplementedError("unsupported platform: %s" % sys.platform)
+
+    raise ValueError("Could not figure out extension manager version: %s" % extension_manager)
