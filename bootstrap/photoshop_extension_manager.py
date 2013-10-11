@@ -44,12 +44,12 @@ def update():
         else:
             uninstall_old = False
         if uninstall_old:
-            msgbox("A new Shotgun Photoshop extensions is available.\n\n"
-                "Extension manager will run twice, once to remove the old extension "
-                "and once to install the new one.", button="Got it")
+            msgbox("A new Shotgun Photoshop extension is available.\n\n"
+                "Adobe Extension Manager will run twice, once to remove the old extension "
+                "and again to install the new one.", button="Got it")
         else:
-            msgbox("A new Shotgun Photoshop extensions is available.\n\n"
-                "Extension manager will now run to install the new version.",
+            msgbox("A new Shotgun Photoshop extension is available.\n\n"
+                "Adobe Extension Manager will now run to install the new version.",
                 button="Got it")
         _upgrade_extension(uninstall_old)
 
