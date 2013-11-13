@@ -42,7 +42,14 @@ class QtLogHandler(logging.Handler):
 
     def emit(self, record):
         message = self.formatter.format(record)
-        clean = cgi.escape(message).encode('ascii', 'xmlcharrefreplace')
+        clean = 'Unable to decode message'
+        for charset in ("utf-8", 'latin-1', 'iso-8859-1', 'us-ascii', 'windows-1252'):
+            try:
+                clean = cgi.escape(unicode(message, charset)).encode('ascii', 'xmlcharrefreplace')
+                break
+            except Exception:
+                continue
+
         for (k, v) in COLOR_MAP.iteritems():
             if ('[%s]' % k) in clean:
                 clean = '<font color="%s">%s</font>' % (v, clean)
