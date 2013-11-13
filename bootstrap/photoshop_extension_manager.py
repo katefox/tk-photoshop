@@ -30,7 +30,7 @@ def msgbox(msg, button="Sorry!"):
         MessageBox = ctypes.windll.user32.MessageBoxA
         MessageBox(None, msg, "Shotgun", 0)
     elif sys.platform == "darwin":
-        os.system("""osascript -e 'tell app "System Events" to activate""")
+        os.system("""osascript -e 'tell app "System Events" to activate'""")
         os.system("""osascript -e 'tell app "System Events" to display dialog "%s" with icon caution buttons "%s!"'""" % (msg, button))
 
 
@@ -38,12 +38,30 @@ def update():
     # Upgrade if the installed version is out of date
     config = _get_config()
     installed_version = config.get("Adobe Extension", "installed_version")
+
+    try:
+        extension_manager = os.environ[ENV_VAR]
+    except KeyError:
+        raise ValueError("Could not open extension manager from env var %s" % ENV_VAR)
+    version = _guess_extension_manager_version(extension_manager)
+
     if _version_cmp(CURRENT_EXTENSION, installed_version) > 0:
         if _version_cmp(VERSION_BEFORE_RENAME, installed_version) >= 0:
             uninstall_old = True
         else:
             uninstall_old = False
-        if uninstall_old:
+        if version == "CC":
+            msgbox("Welcome to the Shotgun Photoshop engine!\n"
+                   "\n"
+                   "The Shotgun Photoshop extension must be installed before using "
+                   "the integration.\n"
+                   "\n"
+                   "Adobe Extension Manager will now automatically install the "
+                   "extension, which may take a minute.\n"
+                   "\n"
+                   "Photoshop CC will launch after the install and be ready to "
+                   "use with Shotgun Pipeline Toolkit.", "Got it")
+        elif uninstall_old:
             msgbox("A new Shotgun Photoshop extension is available.\n\n"
                 "Adobe Extension Manager will run twice, once to remove the old extension "
                 "and again to install the new one.", button="Got it")
