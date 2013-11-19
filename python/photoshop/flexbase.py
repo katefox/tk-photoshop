@@ -35,6 +35,9 @@ PONG = 6  # ACK
 PYTHON_CALLBACK = 10004
 SET_PORT = 10005
 
+HEARTBEAT_TIMEOUT = 'SGTK_PHOTOSHOP_HEARTBEAT_TIMEOUT'
+PHOTOSHOP_TIMEOUT = 'SGTK_PHOTOSHOP_TIMEOUT'
+NETWORK_DEBUG = os.getenv('SGTK_PHOTOSHOP_NETWORK_DEBUG')
 
 def handle_show_log():
     app = QtCore.QCoreApplication.instance()
@@ -69,11 +72,16 @@ class FlexRequest(object):
 
     @classmethod
     def HeartbeatThreadRun(cls):
+        try:
+            timeout = float(os.getenv(HEARTBEAT_TIMEOUT, '0.5'))
+        except:
+            cls.logger.error("Error setting timeout from %s: %s",
+                HEARTBEAT_TIMEOUT, os.getenv(HEARTBEAT_TIMEOUT))
         while True:
             time.sleep(0.2)
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.settimeout(0.5)
+                s.settimeout(timeout)
                 s.connect(('127.0.0.1', cls.remote_port))
                 s.send(struct.pack("i", PING))
                 response = struct.unpack("i", s.recv(struct.calcsize("i")))[0]
@@ -111,6 +119,9 @@ class FlexRequest(object):
 
     @classmethod
     def HandleConnection(cls, sock):
+        if NETWORK_DEBUG is not None:
+            cls.logger.debug("Handling connection from Photoshop")
+
         type = struct.unpack("i", sock.recv(struct.calcsize("i")))[0]
         if type == PYTHON_RESPONSE:
             xml = ''
@@ -176,13 +187,17 @@ class FlexRequest(object):
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(('127.0.0.1', self.remote_port))
             s.send(struct.pack("i", PYTHON_REQUEST))
-            req_str = etree.tostring(request) 
+            req_str = etree.tostring(request)
             s.send(req_str)
             self.logger.debug("--> Sending Flex Request: %s" % req_str)
             s.close()
 
             # wait for response to come through
-            timeout = 60.0
+            try:
+                timeout = float(os.getenv(PHOTOSHOP_TIMEOUT, '60.0'))
+            except:
+                cls.logger.error("Error setting timeout from %s: %s",
+                    PHOTOSHOP_TIMEOUT, os.getenv(PHOTOSHOP_TIMEOUT))
             tick_length = 0.1
             num_ticks = math.ceil(timeout/tick_length)
             for tick in range(0, int(num_ticks)):
