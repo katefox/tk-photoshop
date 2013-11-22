@@ -36,6 +36,8 @@ PYTHON_CALLBACK = 10004
 SET_PORT = 10005
 
 HEARTBEAT_TIMEOUT = 'SGTK_PHOTOSHOP_HEARTBEAT_TIMEOUT'
+HEARTBEAT_INTERVAL = 'SGTK_PHOTOSHOP_HEARTBEAT_INTERVAL'
+HEARTBEAT_TOLERANCE = 'SGTK_PHOTOSHOP_HEARTBEAT_TOLERANCE'
 PHOTOSHOP_TIMEOUT = 'SGTK_PHOTOSHOP_TIMEOUT'
 NETWORK_DEBUG = os.getenv('SGTK_PHOTOSHOP_NETWORK_DEBUG')
 
@@ -77,26 +79,43 @@ class FlexRequest(object):
         except:
             cls.logger.error("Error setting timeout from %s: %s",
                 HEARTBEAT_TIMEOUT, os.getenv(HEARTBEAT_TIMEOUT))
+
+        try:
+            interval = float(os.getenv(HEARTBEAT_INTERVAL, '0.2'))
+        except:
+            cls.logger.error("Error setting interval from %s: %s",
+                HEARTBEAT_INTERVAL, os.getenv(HEARTBEAT_INTERVAL))
+
+        try:
+            tolerance = int(os.getenv(HEARTBEAT_TOLERANCE, '1'))
+        except:
+            cls.logger.error("Error setting tolerance from %s: %s",
+                HEARTBEAT_TOLERANCE, os.getenv(HEARTBEAT_TOLERANCE))
+
         while True:
-            time.sleep(0.2)
+            time.sleep(interval)
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.settimeout(timeout)
                 s.connect(('127.0.0.1', cls.remote_port))
                 s.send(struct.pack("i", PING))
                 response = struct.unpack("i", s.recv(struct.calcsize("i")))[0]
-                if response != PONG:
-                    cls.logger.exception("Python Quitting: Heartbeat unknown response: %s", response)
-                    os._exit(1)
+                if response == PONG:
+                    error_cycle = 0
+                else:
+                    cls.logger.exception("Python: Heartbeat unknown response: %s", response)
+                    error_cycle += 1
             except socket.timeout:
-                cls.logger.debug("Python Quitting: Heartbeat timeout")
-                os._exit(0)
+                cls.logger.debug("Python: Heartbeat timeout")
+                error_cycle += 1
             except socket.error, e:
-                cls.logger.debug("Python Quitting: Heartbeat standard error: %s", errno.errorcode[e.errno])
-                os._exit(0)
+                cls.logger.debug("Python: Heartbeat standard error: %s", errno.errorcode[e.errno])
+                error_cycle += 1
             except Exception, e:
-                cls.logger.exception("Python Quitting: Heartbeat unknown exception")
-                os._exit(1)
+                cls.logger.exception("Python: Heartbeat unknown exception")
+            if error_cycle >= tolerance:
+                cls.logger.error("Python: Quitting.  Heartbeat errors greater than tolerance.")
+                os._exit(0)
 
     @classmethod
     def ListenThreadRun(cls):
