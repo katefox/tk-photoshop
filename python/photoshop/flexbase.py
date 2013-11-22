@@ -1,11 +1,11 @@
 # Copyright (c) 2013 Shotgun Software Inc.
-# 
+#
 # CONFIDENTIAL AND PROPRIETARY
-# 
-# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit 
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
 # Source Code License included in this distribution package. See LICENSE.
-# By accessing, using, copying or modifying this work you indicate your 
-# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
@@ -41,6 +41,9 @@ HEARTBEAT_TOLERANCE = 'SGTK_PHOTOSHOP_HEARTBEAT_TOLERANCE'
 PHOTOSHOP_TIMEOUT = 'SGTK_PHOTOSHOP_TIMEOUT'
 NETWORK_DEBUG = os.getenv('SGTK_PHOTOSHOP_NETWORK_DEBUG')
 
+# Only one request to photoshop at a time
+PhotoshopLock = threading.Lock()
+
 def handle_show_log():
     app = QtCore.QCoreApplication.instance()
     win = app.property('tk-photoshop.log_console')
@@ -70,7 +73,11 @@ class FlexRequest(object):
         """
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(('127.0.0.1', cls.remote_port))
-        s.send(struct.pack("i", ACTIVATE_PYTHON))
+        sent = s.send(struct.pack("i", ACTIVATE_PYTHON))
+        if sent == 0:
+            cls.logger.error("ActivatePython: send did not send data")
+        if NETWORK_DEBUG is not None:
+            cls.logger.info("[Network Debug] ActivatePython send %d", sent)
 
     @classmethod
     def HeartbeatThreadRun(cls):
@@ -98,7 +105,11 @@ class FlexRequest(object):
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.settimeout(timeout)
                 s.connect(('127.0.0.1', cls.remote_port))
-                s.send(struct.pack("i", PING))
+                sent = s.send(struct.pack("i", PING))
+                if sent == 0:
+                    cls.logger.error("Heartbeat: send did not send data")
+                    error_cycle += 1
+                    continue
                 response = struct.unpack("i", s.recv(struct.calcsize("i")))[0]
                 if response == PONG:
                     error_cycle = 0
@@ -106,10 +117,10 @@ class FlexRequest(object):
                     cls.logger.exception("Python: Heartbeat unknown response: %s", response)
                     error_cycle += 1
             except socket.timeout:
-                cls.logger.debug("Python: Heartbeat timeout")
+                cls.logger.info("Python: Heartbeat timeout")
                 error_cycle += 1
             except socket.error, e:
-                cls.logger.debug("Python: Heartbeat standard error: %s", errno.errorcode[e.errno])
+                cls.logger.exception("Python: Heartbeat standard error: %s", errno.errorcode[e.errno])
                 error_cycle += 1
             except Exception, e:
                 cls.logger.exception("Python: Heartbeat unknown exception")
@@ -128,19 +139,26 @@ class FlexRequest(object):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(('127.0.0.1', cls.remote_port))
         # send in multiple pack calls to avoid alignment issues
-        s.send(struct.pack("i", SET_PORT))
-        s.send(struct.pack("i", cls.local_port))
+        sent = s.send(struct.pack("i", SET_PORT))
+        if sent == 0:
+            cls.logger.error("ListenThreadRun: error sending port")
+
+        sent = s.send(struct.pack("i", cls.local_port))
+        if sent == 0:
+            cls.logger.error("ListenThreadRun: error sending port")
+
         s.close()
         while True:
             (client, _) = server.accept()
+
+            if NETWORK_DEBUG is not None:
+                cls.logger.info("[Network Debug] Accepted Connection")
+
             handler = threading.Thread(target=cls.HandleConnection, name="FlexConnectionHandler", args=(client, ))
             handler.start()
 
     @classmethod
     def HandleConnection(cls, sock):
-        if NETWORK_DEBUG is not None:
-            cls.logger.debug("Handling connection from Photoshop")
-
         type = struct.unpack("i", sock.recv(struct.calcsize("i")))[0]
         if type == PYTHON_RESPONSE:
             xml = ''
@@ -149,6 +167,8 @@ class FlexRequest(object):
                 if not buf:
                     break
                 xml += buf
+            if NETWORK_DEBUG is not None:
+                cls.logger.info("[Network Debug] Received Python Response\n\n%s\n\n", xml)
             dom = etree.XML(xml)
             type = dom.find('type').text
             if type == 'requestResponse':
@@ -181,6 +201,8 @@ class FlexRequest(object):
         self.response = None
 
     def __call__(self):
+        PhotoshopLock.acquire()
+
         # register this call for the response
         uid = str(uuid.uuid4())
         self.requests[uid] = {
@@ -205,17 +227,27 @@ class FlexRequest(object):
             FlexRequest.requests[uid]['cond'].acquire()
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(('127.0.0.1', self.remote_port))
-            s.send(struct.pack("i", PYTHON_REQUEST))
+            sent = s.send(struct.pack("i", PYTHON_REQUEST))
             req_str = etree.tostring(request)
-            s.send(req_str)
-            self.logger.debug("--> Sending Flex Request: %s" % req_str)
+            totalsent = 0
+            while totalsent < len(req_str):
+                sent = s.send(req_str)
+                if sent == 0:
+                    self.logger.info("SENT 0, error in sending")
+                totalsent += sent
+
             s.close()
+
+            if NETWORK_DEBUG is not None:
+                self.logger.info("[Network Debug] Sent Python Request %d bytes", totalsent)
+
+            self.logger.debug("--> Sent Flex Request: %s" % req_str)
 
             # wait for response to come through
             try:
                 timeout = float(os.getenv(PHOTOSHOP_TIMEOUT, '60.0'))
             except:
-                cls.logger.error("Error setting timeout from %s: %s",
+                self.logger.error("Error setting timeout from %s: %s",
                     PHOTOSHOP_TIMEOUT, os.getenv(PHOTOSHOP_TIMEOUT))
             tick_length = 0.1
             num_ticks = math.ceil(timeout/tick_length)
@@ -239,6 +271,7 @@ class FlexRequest(object):
             self.logger.exception("Error in FlexRequest.__call__")
             raise
         finally:
+            PhotoshopLock.release()
             del self.requests[uid]
 
         return result
