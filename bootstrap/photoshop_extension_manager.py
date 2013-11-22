@@ -14,7 +14,7 @@ import sys
 import subprocess
 import ConfigParser
 
-CURRENT_EXTENSION = "1.0.0"
+CURRENT_EXTENSION = "1.1.0"
 CURRENT_ZXP_PATH = os.path.normpath(os.path.join(__file__, "..", "..", "SgTkPhotoshopEngine.zxp"))
 
 VERSION_BEFORE_RENAME = "0.1.2"
