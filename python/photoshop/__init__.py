@@ -44,6 +44,8 @@ sys.execpthook = logging_excepthook
 def clear_panel():
     flexbase.requestClearPanel()
 
+def set_message(message):
+    flexbase.requestSetMessage(message)
 
 def add_button(label, callback):
     flexbase.requestAddButton(label, callback)

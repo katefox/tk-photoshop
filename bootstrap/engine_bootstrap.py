@@ -13,7 +13,6 @@ import sys
 import logging
 import logging.handlers
 
-
 # platform specific alert with no dependencies
 def msgbox(msg):
     if sys.platform == "win32":
@@ -75,7 +74,7 @@ try:
     from PySide import QtGui
     from tk_photoshop import logging_console
 except Exception, e:
-    msgbox("Shotgun Pipeline Toolkit failed to initialize PySide.  Is it installed?")
+    photoshop.set_message("Shotgun Pipeline Toolkit failed to initialize PySide.  Is it installed?")
     logger.exception("Failed to initialize PySide.")
     sys.exit(1)
 
@@ -90,7 +89,7 @@ try:
     g_app.setWindowIcon(QtGui.QIcon(os.path.join(g_resourceDir, "app.png")))
     g_app.setApplicationName(sys.argv[0])
 except Exception, e:
-    msgbox("Could not create global PySide app:\n\n%s" % e)
+    photoshop.set_message("Could not create global PySide app:\n\n%s" % e)
     logger.exception("Could not create global PySide app")
     sys.exit(1)
 
@@ -113,7 +112,7 @@ try:
     logger.addHandler(qt_handler)
     g_log.setHidden(True)
 except Exception, e:
-    msgbox("Could not create logging console:\n\n%s" % e)
+    photoshop.set_message("Could not create logging console:\n\n%s" % e)
     logger.exception("Could not create logging console")
     sys.exit(1)
 

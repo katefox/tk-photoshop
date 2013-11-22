@@ -283,6 +283,17 @@ def pythonToDict(v):
     raise ValueError("Unhandled python object (%s) '%s'" % (type(v), v))
 
 
+def requestSetMessage(message):
+    logger = logging.getLogger('sgtk.photoshop.flexbase')
+    logger.debug("requestSetMessage('%s')", message)
+    request = {
+        'type': 'setmessage',
+        'message': message,
+    }
+    FlexRequest(json.dumps(request))()
+    FlexRequest.callbacks.clear()
+
+
 def requestClearPanel():
     logger = logging.getLogger('sgtk.photoshop.flexbase')
     logger.debug("requestClearPanel()")
