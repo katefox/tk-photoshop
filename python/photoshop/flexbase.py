@@ -201,6 +201,7 @@ class FlexRequest(object):
         self.response = None
 
     def __call__(self):
+        self.logger.debug("[PhotoshopLock] Acquiring lock for %s", self.request)
         PhotoshopLock.acquire()
 
         # register this call for the response
@@ -271,6 +272,7 @@ class FlexRequest(object):
             self.logger.exception("Error in FlexRequest.__call__")
             raise
         finally:
+            self.logger.debug("[PhotoshopLock] Releasing lock for %s", self.request)
             PhotoshopLock.release()
             del self.requests[uid]
 
