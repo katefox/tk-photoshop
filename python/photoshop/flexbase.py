@@ -77,7 +77,8 @@ class FlexRequest(object):
         if sent == 0:
             cls.logger.error("ActivatePython: send did not send data")
         if NETWORK_DEBUG is not None:
-            cls.logger.info("[Network Debug] ActivatePython send %d", sent)
+            cls.logger.info("[Network Debug] ActivatePython send %d to 127.0.0.1:%s",
+                sent, cls.remote_port)
 
     @classmethod
     def HeartbeatThreadRun(cls):
@@ -240,7 +241,8 @@ class FlexRequest(object):
             s.close()
 
             if NETWORK_DEBUG is not None:
-                self.logger.info("[Network Debug] Sent Python Request %d bytes", totalsent)
+                self.logger.info("[Network Debug] Sent Python Request %d bytes "
+                    "to 127.0.0.1:%s\n%s\n", totalsent, self.remote_port, req_str)
 
             self.logger.debug("--> Sent Flex Request: %s" % req_str)
 
