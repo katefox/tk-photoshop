@@ -95,11 +95,12 @@ class FlexRequest(object):
                 HEARTBEAT_INTERVAL, os.getenv(HEARTBEAT_INTERVAL))
 
         try:
-            tolerance = int(os.getenv(HEARTBEAT_TOLERANCE, '1'))
+            tolerance = int(os.getenv(HEARTBEAT_TOLERANCE, '2'))
         except:
             cls.logger.error("Error setting tolerance from %s: %s",
                 HEARTBEAT_TOLERANCE, os.getenv(HEARTBEAT_TOLERANCE))
 
+        error_cycle = 0
         while True:
             time.sleep(interval)
             try:
@@ -248,7 +249,7 @@ class FlexRequest(object):
 
             # wait for response to come through
             try:
-                timeout = float(os.getenv(PHOTOSHOP_TIMEOUT, '60.0'))
+                timeout = float(os.getenv(PHOTOSHOP_TIMEOUT, '300.0'))
             except:
                 self.logger.error("Error setting timeout from %s: %s",
                     PHOTOSHOP_TIMEOUT, os.getenv(PHOTOSHOP_TIMEOUT))
