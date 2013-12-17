@@ -41,8 +41,6 @@ HEARTBEAT_TOLERANCE = 'SGTK_PHOTOSHOP_HEARTBEAT_TOLERANCE'
 PHOTOSHOP_TIMEOUT = 'SGTK_PHOTOSHOP_TIMEOUT'
 NETWORK_DEBUG = os.getenv('SGTK_PHOTOSHOP_NETWORK_DEBUG')
 
-# Only one request to photoshop at a time
-PhotoshopLock = threading.Lock()
 
 def handle_show_log():
     app = QtCore.QCoreApplication.instance()
@@ -60,6 +58,25 @@ class FlexRequest(object):
         cls.remote_port = remote_port
         cls.local_port = None
         cls.logger = logging.getLogger('sgtk.photoshop.flexbase.FlexRequest')
+
+        # create a server socket
+        cls.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        cls.server.bind(('127.0.0.1', 0))
+        cls.server.listen(socket.SOMAXCONN)
+        cls.local_port = cls.server.getsockname()[1]
+        cls.logger.info('listening on port %s', cls.local_port)
+        # send the local port back to the plugin
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(('127.0.0.1', cls.remote_port))
+        # send in multiple pack calls to avoid alignment issues
+        sent = s.send(struct.pack("i", SET_PORT))
+        if sent == 0:
+            cls.logger.error("setup: error sending listen port command")
+        sent = s.send(struct.pack("i", cls.local_port))
+        if sent == 0:
+            cls.logger.error("setup: error sending listen port")
+        s.close()
+
         server = threading.Thread(target=cls.ListenThreadRun, name="FlexListenThread")
         heartbeat = threading.Thread(target=cls.HeartbeatThreadRun, name="HeartbeatThread")
         server.start()
@@ -132,26 +149,8 @@ class FlexRequest(object):
 
     @classmethod
     def ListenThreadRun(cls):
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.bind(('127.0.0.1', 0))
-        server.listen(socket.SOMAXCONN)
-        cls.local_port = server.getsockname()[1]
-        cls.logger.info('listening on port %s', cls.local_port)
-        # send the local port back to the plugin
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(('127.0.0.1', cls.remote_port))
-        # send in multiple pack calls to avoid alignment issues
-        sent = s.send(struct.pack("i", SET_PORT))
-        if sent == 0:
-            cls.logger.error("ListenThreadRun: error sending port")
-
-        sent = s.send(struct.pack("i", cls.local_port))
-        if sent == 0:
-            cls.logger.error("ListenThreadRun: error sending port")
-
-        s.close()
         while True:
-            (client, _) = server.accept()
+            (client, _) = cls.server.accept()
 
             if NETWORK_DEBUG is not None:
                 cls.logger.info("[Network Debug] Accepted Connection")
@@ -203,9 +202,6 @@ class FlexRequest(object):
         self.response = None
 
     def __call__(self):
-        self.logger.debug("[PhotoshopLock] Acquiring lock for %s", self.request)
-        PhotoshopLock.acquire()
-
         # register this call for the response
         uid = str(uuid.uuid4())
         self.requests[uid] = {
@@ -275,8 +271,6 @@ class FlexRequest(object):
             self.logger.exception("Error in FlexRequest.__call__")
             raise
         finally:
-            self.logger.debug("[PhotoshopLock] Releasing lock for %s", self.request)
-            PhotoshopLock.release()
             del self.requests[uid]
 
         return result
