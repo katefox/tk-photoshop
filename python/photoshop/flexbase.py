@@ -52,10 +52,11 @@ def handle_show_log():
 
 class FlexRequest(object):
     @classmethod
-    def setup(cls, remote_port):
+    def setup(cls, remote_port, heartbeat_port):
         cls.requests = {}
         cls.callbacks = {}
         cls.remote_port = remote_port
+        cls.heartbeat_port = heartbeat_port
         cls.local_port = None
         cls.logger = logging.getLogger('sgtk.photoshop.flexbase.FlexRequest')
 
@@ -78,8 +79,9 @@ class FlexRequest(object):
         s.close()
 
         server = threading.Thread(target=cls.ListenThreadRun, name="FlexListenThread")
-        heartbeat = threading.Thread(target=cls.HeartbeatThreadRun, name="HeartbeatThread")
         server.start()
+
+        heartbeat = threading.Thread(target=cls.HeartbeatThreadRun, name="HeartbeatThread")
         heartbeat.start()
 
     @classmethod
@@ -119,33 +121,35 @@ class FlexRequest(object):
 
         error_cycle = 0
         while True:
-            time.sleep(interval)
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.settimeout(timeout)
-                s.connect(('127.0.0.1', cls.remote_port))
-                sent = s.send(struct.pack("i", PING))
-                if sent == 0:
-                    cls.logger.error("Heartbeat: send did not send data")
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(timeout)
+            s.connect(('127.0.0.1', cls.heartbeat_port))
+
+            while True:
+                time.sleep(interval)
+                try:
+                    sent = s.send(struct.pack("i", PING))
+                    if sent == 0:
+                        cls.logger.error("Heartbeat: send did not send data")
+                        error_cycle += 1
+                        continue
+                    response = struct.unpack("i", s.recv(struct.calcsize("i")))[0]
+                    if response == PONG:
+                        error_cycle = 0
+                    else:
+                        cls.logger.exception("Python: Heartbeat unknown response: %s", response)
+                        error_cycle += 1
+                except socket.timeout:
+                    cls.logger.info("Python: Heartbeat timeout")
                     error_cycle += 1
-                    continue
-                response = struct.unpack("i", s.recv(struct.calcsize("i")))[0]
-                if response == PONG:
-                    error_cycle = 0
-                else:
-                    cls.logger.exception("Python: Heartbeat unknown response: %s", response)
+                except socket.error, e:
+                    cls.logger.exception("Python: Heartbeat standard error: %s", errno.errorcode[e.errno])
                     error_cycle += 1
-            except socket.timeout:
-                cls.logger.info("Python: Heartbeat timeout")
-                error_cycle += 1
-            except socket.error, e:
-                cls.logger.exception("Python: Heartbeat standard error: %s", errno.errorcode[e.errno])
-                error_cycle += 1
-            except Exception, e:
-                cls.logger.exception("Python: Heartbeat unknown exception")
-            if error_cycle >= tolerance:
-                cls.logger.error("Python: Quitting.  Heartbeat errors greater than tolerance.")
-                os._exit(0)
+                except Exception, e:
+                    cls.logger.exception("Python: Heartbeat unknown exception")
+                if error_cycle >= tolerance:
+                    cls.logger.error("Python: Quitting.  Heartbeat errors greater than tolerance.")
+                    os._exit(0)
 
     @classmethod
     def ListenThreadRun(cls):
@@ -226,14 +230,20 @@ class FlexRequest(object):
             FlexRequest.requests[uid]['cond'].acquire()
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(('127.0.0.1', self.remote_port))
-            sent = s.send(struct.pack("i", PYTHON_REQUEST))
+
             req_str = etree.tostring(request)
+            sent = s.send(struct.pack("ii", PYTHON_REQUEST, len(req_str)))
             totalsent = 0
             while totalsent < len(req_str):
-                sent = s.send(req_str)
+                sent = s.send(req_str[totalsent:])
                 if sent == 0:
                     self.logger.info("SENT 0, error in sending")
+                    return
                 totalsent += sent
+
+            response = struct.unpack("i", s.recv(struct.calcsize("i")))[0]
+            if (response != 0):
+                self.logger.error("SENT response non-zero: %d", response)
 
             s.close()
 
@@ -276,8 +286,8 @@ class FlexRequest(object):
         return result
 
 
-def setup(remote_port):
-    FlexRequest.setup(remote_port)
+def setup(remote_port, heartbeat_port):
+    FlexRequest.setup(remote_port, heartbeat_port)
 
 
 def dictToPython(d):

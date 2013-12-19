@@ -1,11 +1,11 @@
 # Copyright (c) 2013 Shotgun Software Inc.
-# 
+#
 # CONFIDENTIAL AND PROPRIETARY
-# 
-# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit 
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
 # Source Code License included in this distribution package. See LICENSE.
-# By accessing, using, copying or modifying this work you indicate your 
-# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 # system modules
@@ -44,8 +44,10 @@ sys.execpthook = logging_excepthook
 def clear_panel():
     flexbase.requestClearPanel()
 
+
 def set_message(message):
     flexbase.requestSetMessage(message)
+
 
 def add_button(label, callback):
     flexbase.requestAddButton(label, callback)
@@ -54,14 +56,17 @@ def add_button(label, callback):
 def RemoteObject(cls, *args, **kwargs):
     return flexbase.RemoteObject(cls, *args, **kwargs)
 
+
 def StaticObject(cls, prop):
     return flexbase.requestStatic(cls, prop)
 
+
 # plugin initialization will call the app setup
-def initialize_photoshop_application(remote_port):
+def initialize_photoshop_application(remote_port, heartbeat_port):
     global app
     try:
-        flexbase.setup(remote_port)
+        logger.error("FB: %s" % str(flexbase))
+        flexbase.setup(remote_port, heartbeat_port)
         app = flexbase.requestStatic('com.adobe.csawlib.photoshop.Photoshop', 'app')
         logger.info("Photoshop version is '%s'", app.version)
     except:
