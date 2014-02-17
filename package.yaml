@@ -1,0 +1,25 @@
+config_version : 0
+
+name: enter-package-name
+
+version: 0.1.9
+
+uuid: 0f637245-1581-4574-b312-430ce9ddc893
+
+authors:
+- kaitlyn.fox
+
+description: >
+ Enter description here. Multiline is ok, but make sure
+ that you leave the single leading space on each line.
+
+variants:
+- [ Windows, python-2.6.4]
+
+requires: []
+
+commands:
+- export PATH=$PATH:!ROOT!/ext/
+
+help:
+- [ "github", "chrome https://github.com/shotgunsoftware/tk-photoshop" ]
