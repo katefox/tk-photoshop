@@ -1,6 +1,6 @@
 config_version : 0
 
-name: enter-package-name
+name: tk_photoshop
 
 version: 0.1.9
 
@@ -10,8 +10,7 @@ authors:
 - kaitlyn.fox
 
 description: >
- Enter description here. Multiline is ok, but make sure
- that you leave the single leading space on each line.
+ A Shotgun Pipeline Toolkit Engine for Photoshop
 
 variants:
 - [ Windows, python-2.6.4]
