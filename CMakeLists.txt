@@ -17,8 +17,8 @@ rez_install_files(
 )
 
 
-file(GLOB_RECURSE resources_files "resources/*.mel")
+file(GLOB_RECURSE resource_files "resources/*")
 rez_install_files(
-    ${resources_files}
+    ${resource_files}
     DESTINATION .
 )
