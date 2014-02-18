@@ -166,7 +166,7 @@ def _version_cmp(left, right):
     return cmp(normalize(left), normalize(right))
 
 
-def _upgrade_extension(uninstall = False):
+def _upgrade_extension(uninstall=False):
     # Grab path to extension manager
     try:
         extension_manager = os.environ[ENV_VAR]
@@ -318,4 +318,5 @@ def _guess_extension_manager_version(extension_manager):
     else:
         raise NotImplementedError("unsupported platform: %s" % sys.platform)
 
-    raise ValueError("Could not figure out extension manager version: %s" % extension_manager)
+    return 'CS6'
+    # raise ValueError("Could not figure out extension manager version: %s" % extension_manager)
